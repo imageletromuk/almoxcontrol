@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlmoxControl — Gestão de Estoque</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#181c27;--s2:#1e2333;--s3:#252b3d;
+  --border:#2a3048;--border2:#3a4060;
+  --accent:#4f8ef7;--a2:#2ecc9a;--a3:#f59e0b;--danger:#ef4444;
+  --text:#e8ecf4;--t2:#8b95b0;--t3:#535c75;
+  --mono:'IBM Plex Mono',monospace;--sans:'Sora',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.layout{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:224px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.logo{padding:22px 18px 18px;border-bottom:1px solid var(--border)}
+.logo-mark{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:3px}
+.logo h1{font-size:17px;font-weight:600;letter-spacing:-0.5px}
+.nav{padding:12px 10px;flex:1}
+.nav-label{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:2px;text-transform:uppercase;padding:0 8px;margin:14px 0 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--t2);font-size:13px;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.nav-item:hover{background:var(--s2);color:var(--text)}
+.nav-item.active{background:rgba(79,142,247,.13);color:var(--accent);border-color:rgba(79,142,247,.2)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.sidebar-footer{padding:14px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);font-family:var(--mono)}
+.pulse{display:inline-block;width:6px;height:6px;background:var(--a2);border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAIN */
+.main{margin-left:224px;flex:1}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 26px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:500}
+.topbar-sub{font-size:12px;color:var(--t2);margin-top:1px;font-family:var(--mono)}
+.topbar-actions{display:flex;gap:8px}
+.content{padding:22px 26px}
+.page{display:none}.page.active{display:block}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-family:var(--sans);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn-primary:hover{background:#3a7ae8;border-color:#3a7ae8}
+.btn-success{background:rgba(46,204,154,.12);border-color:rgba(46,204,154,.3);color:var(--a2)}
+.btn-success:hover{background:rgba(46,204,154,.22)}
+.btn-danger{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--danger)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-amber{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--a3)}
+.btn svg{width:14px;height:14px}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-label{font-size:10px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+.stat-value{font-size:26px;font-weight:600;line-height:1}
+.stat-sub{font-size:11px;color:var(--t2);margin-top:5px}
+.c-blue{color:var(--accent)}.c-green{color:var(--a2)}.c-amber{color:var(--a3)}.c-red{color:var(--danger)}
+
+/* TABLE WRAP */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.tw-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tw-title{font-size:14px;font-weight:500;white-space:nowrap}
+table{width:100%;border-collapse:collapse}
+thead th{padding:9px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--t3);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--s2)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--s2)}
+td{padding:11px 14px;font-size:13px}
+.code{font-family:var(--mono);font-size:11px;color:var(--t2)}
+.fw{font-weight:500}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:rgba(139,149,176,.1);color:var(--t2);border:1px solid var(--border)}
+.b-green{background:rgba(46,204,154,.12);color:var(--a2);border:1px solid rgba(46,204,154,.25)}
+.b-amber{background:rgba(245,158,11,.12);color:var(--a3);border:1px solid rgba(245,158,11,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.b-blue{background:rgba(79,142,247,.12);color:var(--accent);border:1px solid rgba(79,142,247,.25)}
+.b-purple{background:rgba(139,92,246,.12);color:#a78bfa;border:1px solid rgba(139,92,246,.25)}
+
+/* ICON BUTTONS */
+.ib{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.ib:hover{background:var(--s2);color:var(--text);border-color:var(--border2)}
+.ib.del:hover{background:rgba(239,68,68,.12);color:var(--danger);border-color:rgba(239,68,68,.3)}
+.ib.ok:hover{background:rgba(46,204,154,.12);color:var(--a2);border-color:rgba(46,204,154,.3)}
+.ib svg{width:13px;height:13px}
+.act-row{display:flex;gap:5px}
+
+/* SEARCH */
+.sbox{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;min-width:200px}
+.sbox svg{width:13px;height:13px;color:var(--t3);flex-shrink:0}
+.sbox input{background:none;border:none;outline:none;color:var(--text);font-family:var(--sans);font-size:13px;width:100%}
+.sbox input::placeholder{color:var(--t3)}
+select.fsel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;cursor:pointer}
+
+/* MODAL */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.moverlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:26px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto}
+.modal.wide{width:780px}
+.modal.narrow{width:420px}
+.mhead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px}
+.mtitle{font-size:16px;font-weight:600}
+.msub{font-size:12px;color:var(--t2);margin-top:2px}
+.mclose{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mclose:hover{background:var(--s2);color:var(--text)}
+.mclose svg{width:15px;height:15px}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+
+/* FORM */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg.full{grid-column:1/-1}
+.flabel{font-size:10px;color:var(--t2);letter-spacing:.5px;text-transform:uppercase;font-weight:500}
+.finput{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:100%}
+.finput:focus{border-color:var(--accent)}
+.finput::placeholder{color:var(--t3)}
+textarea.finput{resize:vertical;min-height:70px}
+
+/* ALERT */
+.alert{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px}
+.alert svg{width:17px;height:17px;color:var(--danger);flex-shrink:0}
+.alert-warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
+.alert-warn svg{color:var(--a3)}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px;color:var(--t3)}
+.empty svg{width:36px;height:36px;margin:0 auto 10px;display:block;opacity:.35}
+.empty p{font-size:13px}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:500;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:9px;animation:sin .2s ease;min-width:230px}
+.toast.ok{border-color:rgba(46,204,154,.4)}.toast.ok svg{color:var(--a2)}
+.toast.err{border-color:rgba(239,68,68,.4)}.toast.err svg{color:var(--danger)}
+.toast svg{width:15px;height:15px;flex-shrink:0}
+@keyframes sin{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* COLLAB CARD */
+.collab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.collab-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .15s}
+.collab-card:hover{border-color:var(--border2);background:var(--s2)}
+.collab-card.selected{border-color:var(--accent);background:rgba(79,142,247,.07)}
+.cc-top{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.cc-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0}
+.cc-name{font-weight:500;font-size:14px}
+.cc-info{font-size:11px;color:var(--t2);margin-top:1px;font-family:var(--mono)}
+.cc-stats{display:flex;gap:8px;flex-wrap:wrap}
+
+/* SAIDA MULTIITEM */
+.item-picker{border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:320px;overflow-y:auto}
+.ip-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+.ip-row:last-child{border-bottom:none}
+.ip-row:hover{background:var(--s2)}
+.ip-row.selected{background:rgba(79,142,247,.08);border-left:3px solid var(--accent)}
+.ip-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.ip-row.selected .ip-check{background:var(--accent);border-color:var(--accent)}
+.ip-check svg{width:11px;height:11px;color:#fff;display:none}
+.ip-row.selected .ip-check svg{display:block}
+.ip-info{flex:1}
+.ip-name{font-size:13px;font-weight:500}
+.ip-sub{font-size:11px;color:var(--t2);font-family:var(--mono);margin-top:1px}
+.ip-qty-wrap{display:flex;align-items:center;gap:6px}
+.ip-qty-wrap input{width:60px;padding:5px 8px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none}
+.ip-stock{font-size:11px;color:var(--t3);font-family:var(--mono)}
+.cart-summary{background:var(--s2);border-radius:10px;padding:12px 14px;margin-top:12px}
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cart-item:last-child{border-bottom:none}
+.cart-remove{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cart-remove:hover{color:var(--danger);border-color:rgba(239,68,68,.3)}
+.cart-remove svg{width:11px;height:11px}
+
+/* RESPONSABILIDADE */
+.resp-section{margin-bottom:18px}
+.resp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.resp-title{font-size:14px;font-weight:500}
+.resp-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--s2);border:1px solid var(--border);border-radius:8px;margin-bottom:7px}
+.ri-info{flex:1}
+.ri-name{font-size:13px;font-weight:500}
+.ri-sub{font-size:11px;color:var(--t2);font-family:var(--mono);margin-top:1px}
+.ri-date{font-size:11px;color:var(--t3);font-family:var(--mono);text-align:right;min-width:90px}
+
+/* RELATORIO IMPRESSAO */
+@media print{
+  .sidebar,.topbar,.topbar-actions,.no-print{display:none!important}
+  .main{margin-left:0}
+  .content{padding:0}
+  .print-doc{padding:20px;font-family:sans-serif;color:#000;background:#fff}
+  .print-doc table{border-collapse:collapse;width:100%}
+  .print-doc td,.print-doc th{border:1px solid #ccc;padding:6px 10px;font-size:12px}
+  .print-doc thead th{background:#f0f0f0}
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* SIZE TAG */
+.size-tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11px;font-family:var(--mono);background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3);margin-left:4px}
+
+.divider{height:1px;background:var(--border);margin:16px 0}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:15px;font-weight:500}
+</style>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, push, remove, update, child }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // ════════════════════════════════════════════════════
+    // COLE AQUI AS SUAS CREDENCIAIS DO FIREBASE
+    // (Projeto → Configurações → Seus apps → Config SDK)
+    // ════════════════════════════════════════════════════
+    const firebaseConfig = {
+      apiKey:            "AIzaSyAgJPtzVQZ2JTAX0OxJYwxTcMc4TUGNONc",
+      authDomain:        "sistema-almoxcontrol.firebaseapp.com",
+      databaseURL:       "https://sistema-almoxcontrol-default-rtdb.firebaseio.com",
+      projectId:         "sistema-almoxcontrol",
+      storageBucket:     "sistema-almoxcontrol.firebasestorage.app",
+      messagingSenderId: "195012145726",
+      appId:             "1:195012145726:web:ed2e61833108a20d32176f"
+    };
+    // ════════════════════════════════════════════════════
+
+    // Inicializa Firebase
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    // ── Verifica se as credenciais foram preenchidas ──
+    const configOk = !Object.values(firebaseConfig).some(v => v.startsWith('COLE_'));
+
+    // ── Expõe API para o restante do app ──
+    window.FB = {
+      configured: configOk,
+      db,
+      ref: (path)           => ref(db, path),
+      set: (path, val)      => set(ref(db, path), val),
+      get: (path)           => get(ref(db, path)).then(s => s.exists() ? s.val() : null),
+      push:(path, val)      => push(ref(db, path), val),
+      remove:(path)         => remove(ref(db, path)),
+      update:(path, val)    => update(ref(db, path), val),
+      onValue:(path, cb)    => onValue(ref(db, path), snap => cb(snap.exists() ? snap.val() : null)),
+    };
+
+    // Dispara evento para o app saber que Firebase está pronto
+    window.dispatchEvent(new Event('fb-ready'));
+  </script>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">SISTEMA</div>
+    <h1>AlmoxControl</h1>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Principal</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="nav('estoque',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Estoque
+    </div>
+    <div class="nav-item" onclick="nav('movimentos',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      Movimentações
+    </div>
+    <div class="nav-label">Colaboradores</div>
+    <div class="nav-item" onclick="nav('colaboradores',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Colaboradores
+    </div>
+    <div class="nav-label">Operações</div>
+    <div class="nav-item" onclick="nav('saida',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Entrega de EPIs
+    </div>
+    <div class="nav-item" onclick="nav('devolucao',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Devolução
+    </div>
+    <div class="nav-item" onclick="nav('relatorios',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      Relatórios
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+  <span class="pulse"></span> v4.0
+  <div id="fb-status" style="margin-top:4px;font-size:10px;color:var(--t3)">⬤ offline</div>
+</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="pg-title">Dashboard</div>
+      <div class="topbar-sub" id="pg-sub">Visão geral do almoxarifado</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn no-print" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar CSV
+      </button>
+      <button class="btn btn-primary no-print" id="topbar-btn" onclick="openCadastro()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Item
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Itens em Estoque</div><div class="stat-value c-blue" id="s-total">0</div><div class="stat-sub">itens cadastrados</div></div>
+        <div class="stat-card"><div class="stat-label">Colaboradores</div><div class="stat-value c-green" id="s-colab">0</div><div class="stat-sub">funcionários ativos</div></div>
+        <div class="stat-card"><div class="stat-label">Estoque Baixo</div><div class="stat-value c-amber" id="s-low">0</div><div class="stat-sub">abaixo do mínimo</div></div>
+        <div class="stat-card"><div class="stat-label">Zerados</div><div class="stat-value c-red" id="s-zero">0</div><div class="stat-sub">sem estoque</div></div>
+      </div>
+      <div id="dash-alerts"></div>
+      <div class="tw">
+        <div class="tw-header"><div class="tw-title">Itens Críticos</div></div>
+        <table><thead><tr><th>Código</th><th>Item</th><th>Categoria</th><th>Qtd Atual</th><th>Mínimo</th><th>Status</th></tr></thead>
+        <tbody id="dash-tb"></tbody></table>
+        <div id="dash-empty" class="empty" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20,6 9,17 4,12"/></svg><p>Todos os itens com estoque adequado!</p></div>
+      </div>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div id="pg-estoque" class="page">
+      <div class="tw">
+        <div class="tw-header">
+          <div class="tw-title">Itens em Estoque</div>
+          <div class="sbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="est-search" placeholder="Buscar..." oninput="renderEstoque()"></div>
+          <select class="fsel" id="est-cat" onchange="renderEstoque()"><option value="">Todas as categorias</option></select>
+        </div>
+        <table>
+          <thead><tr><th>Código</th><th>Item / Tamanho</th><th>Categoria</th><th>C.A.</th><th>Local</th><th>Qtd</th><th>Mín</th><th>Un</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="est-tb"></tbody>
+        </table>
+        <div id="est-empty" class="empty" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><p>Nenhum item. Clique em "Novo Item" para começar.</p></div>
+      </div>
+    </div>
+
+    <!-- MOVIMENTAÇÕES -->
+    <div id="pg-movimentos" class="page">
+      <div class="tw">
+        <div class="tw-header">
+          <div class="tw-title">Histórico de Movimentações</div>
+          <select class="fsel" id="mv-filt" onchange="renderMovimentos()"><option value="">Todos</option><option value="entrada">Entradas</option><option value="saida">Saídas</option><option value="devolucao">Devoluções</option><option value="ajuste">Ajustes</option></select>
+        </div>
+        <div id="mv-list"></div>
+        <div id="mv-empty" class="empty" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/></svg><p>Nenhuma movimentação registrada.</p></div>
+      </div>
+    </div>
+
+    <!-- COLABORADORES -->
+    <div id="pg-colaboradores" class="page">
+      <div class="section-head">
+        <div class="section-title">Colaboradores</div>
+        <button class="btn btn-primary" onclick="openCadCollab()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Colaborador
+        </button>
+      </div>
+      <div class="sbox" style="margin-bottom:14px;max-width:320px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="col-search" placeholder="Buscar colaborador..." oninput="renderColabs()"></div>
+      <div class="collab-grid" id="collab-grid"></div>
+      <div id="collab-empty" class="empty" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Nenhum colaborador cadastrado.</p></div>
+    </div>
+
+    <!-- ENTREGA DE EPIs (saída multi-item) -->
+    <div id="pg-saida" class="page">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+        <!-- LEFT: seleção de colaborador e itens -->
+        <div>
+          <div class="tw">
+            <div class="tw-header"><div class="tw-title">1 · Selecionar Colaborador</div></div>
+            <div style="padding:14px">
+              <select class="finput" id="saida-colab" onchange="onSaidaColabChange()"><option value="">Escolha o colaborador...</option></select>
+            </div>
+          </div>
+          <div class="tw">
+            <div class="tw-header">
+              <div class="tw-title">2 · Selecionar Itens</div>
+              <div class="sbox" style="max-width:200px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="saida-search" placeholder="Filtrar..." oninput="renderSaidaPicker()"></div>
+            </div>
+            <div style="padding:12px">
+              <div class="item-picker" id="saida-picker"></div>
+            </div>
+          </div>
+          <div class="tw">
+            <div class="tw-header"><div class="tw-title">3 · Informações</div></div>
+            <div style="padding:14px">
+              <div class="fg"><label class="flabel">Responsável pela entrega</label><input type="text" class="finput" id="saida-resp" placeholder="Nome do operador"></div>
+              <div class="fg"><label class="flabel">Observações</label><textarea class="finput" id="saida-obs" placeholder="Observações adicionais..."></textarea></div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT: carrinho -->
+        <div>
+          <div class="tw" style="position:sticky;top:80px">
+            <div class="tw-header"><div class="tw-title">Carrinho de Entrega</div><span id="cart-count" class="badge b-blue">0 itens</span></div>
+            <div style="padding:14px">
+              <div id="cart-list"><div class="empty" style="padding:24px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><p>Selecione itens ao lado</p></div></div>
+              <div class="divider"></div>
+              <button class="btn btn-success" onclick="confirmarEntrega()" style="width:100%;justify-content:center;padding:11px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                Confirmar Entrega e Gerar Relatório
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVOLUÇÃO -->
+    <div id="pg-devolucao" class="page">
+      <div class="tw" style="max-width:700px">
+        <div class="tw-header"><div class="tw-title">Devolução de EPIs</div></div>
+        <div style="padding:16px 18px">
+          <div class="fg"><label class="flabel">Selecionar Colaborador</label>
+            <select class="finput" id="dev-colab" onchange="renderDevItems()"><option value="">Escolha o colaborador...</option></select>
+          </div>
+        </div>
+        <div id="dev-items-wrap" style="padding:0 18px 18px"></div>
+      </div>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div id="pg-relatorios" class="page">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="tw">
+          <div class="tw-header"><div class="tw-title">Movimentações por Tipo</div></div>
+          <div style="padding:14px" id="rep-tipos"></div>
+        </div>
+        <div class="tw">
+          <div class="tw-header"><div class="tw-title">Top 5 Itens Movimentados</div></div>
+          <div style="padding:14px" id="rep-top"></div>
+        </div>
+        <div class="tw">
+          <div class="tw-header"><div class="tw-title">Itens com Estoque Baixo</div></div>
+          <div style="padding:14px" id="rep-baixo"></div>
+        </div>
+        <div class="tw">
+          <div class="tw-header"><div class="tw-title">EPIs por Colaborador</div></div>
+          <div style="padding:14px" id="rep-colab"></div>
+        </div>
+      </div>
+      <div class="tw">
+        <div class="tw-header"><div class="tw-title">Posição do Estoque</div></div>
+        <table><thead><tr><th>Código</th><th>Item</th><th>Categoria</th><th>C.A.</th><th>Qtd</th><th>Mínimo</th><th>Status</th></tr></thead>
+        <tbody id="rep-tb"></tbody></table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /layout -->
+
+<!-- ══════════ MODAIS ══════════ -->
+
+<!-- Modal: Cadastro de Item -->
+<div class="moverlay" id="m-item">
+  <div class="modal">
+    <div class="mhead">
+      <div><div class="mtitle" id="m-item-title">Cadastrar Item</div><div class="msub">Preencha os dados do material</div></div>
+      <button class="mclose" onclick="closeModal('m-item')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <input type="hidden" id="item-id">
+    <div class="fg2">
+      <div class="fg"><label class="flabel">Código / SKU</label><input class="finput" id="item-codigo" placeholder="EPI-001"></div>
+      <div class="fg"><label class="flabel">Categoria</label><input class="finput" id="item-cat" placeholder="EPI - Cabeça"></div>
+      <div class="fg full"><label class="flabel">Nome do Item</label><input class="finput" id="item-nome" placeholder="Descrição do material"></div>
+      <div class="fg"><label class="flabel">N° C.A. (Certificado de Aprovação)</label><input class="finput" id="item-ca" placeholder="Ex: 35.543 ou N/A"></div>
+      <div class="fg"><label class="flabel">Quantidade Atual</label><input type="number" class="finput" id="item-qty" min="0" placeholder="0"></div>
+      <div class="fg"><label class="flabel">Estoque Mínimo</label><input type="number" class="finput" id="item-min" min="0" placeholder="5"></div>
+      <div class="fg"><label class="flabel">Unidade</label>
+        <select class="finput" id="item-un">
+          <option value="un">Unidade (un)</option><option value="par">Par</option><option value="cx">Caixa (cx)</option>
+          <option value="pct">Pacote</option><option value="kg">Quilograma (kg)</option><option value="lt">Litro (lt)</option>
+          <option value="m">Metro (m)</option><option value="rolo">Rolo</option><option value="kit">Kit</option><option value="bloco">Bloco</option>
+        </select>
+      </div>
+      <div class="fg"><label class="flabel">Tamanho (se uniforme)</label>
+        <select class="finput" id="item-size">
+          <option value="">Não se aplica</option>
+          <option value="PP">PP — Extra Pequeno</option>
+          <option value="P">P — Pequeno</option>
+          <option value="M">M — Médio</option>
+          <option value="G">G — Grande</option>
+          <option value="GG">GG — Extra Grande</option>
+          <option value="XG">XG — Extra Extra Grande</option>
+          <option value="36">Calçado 36</option><option value="37">Calçado 37</option><option value="38">Calçado 38</option>
+          <option value="39">Calçado 39</option><option value="40">Calçado 40</option><option value="41">Calçado 41</option>
+          <option value="42">Calçado 42</option><option value="43">Calçado 43</option><option value="44">Calçado 44</option>
+          <option value="45">Calçado 45</option><option value="46">Calçado 46</option>
+        </select>
+      </div>
+      <div class="fg"><label class="flabel">Localização</label><input class="finput" id="item-local" placeholder="Prateleira A1"></div>
+      <div class="fg full"><label class="flabel">Descrição / Especificações</label><textarea class="finput" id="item-desc"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('m-item')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarItem()">Salvar Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cadastro de Colaborador -->
+<div class="moverlay" id="m-colab">
+  <div class="modal narrow">
+    <div class="mhead">
+      <div><div class="mtitle" id="m-colab-title">Novo Colaborador</div><div class="msub">Dados do funcionário</div></div>
+      <button class="mclose" onclick="closeModal('m-colab')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <input type="hidden" id="colab-id">
+    <div class="fg"><label class="flabel">Nome Completo</label><input class="finput" id="colab-nome" placeholder="Nome do funcionário"></div>
+    <div class="fg"><label class="flabel">Matrícula / CPF</label><input class="finput" id="colab-mat" placeholder="000.000.000-00"></div>
+    <div class="fg"><label class="flabel">Cargo / Função</label><input class="finput" id="colab-cargo" placeholder="Eletricista, Técnico..."></div>
+    <div class="fg"><label class="flabel">Setor / Equipe</label><input class="finput" id="colab-setor" placeholder="Manutenção, Campo..."></div>
+    <div class="fg2">
+      <div class="fg"><label class="flabel">Tamanho de Roupa</label>
+        <select class="finput" id="colab-troupa">
+          <option value="">Não inf.</option><option value="PP">PP</option><option value="P">P</option>
+          <option value="M">M</option><option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+        </select>
+      </div>
+      <div class="fg"><label class="flabel">Tamanho de Calçado</label>
+        <select class="finput" id="colab-tcalc">
+          <option value="">Não inf.</option>
+          <option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option>
+          <option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option>
+          <option value="44">44</option><option value="45">45</option><option value="46">46</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="flabel">Telefone</label><input class="finput" id="colab-tel" placeholder="(00) 00000-0000"></div>
+    <div class="fg"><label class="flabel">Observações</label><textarea class="finput" id="colab-obs" placeholder="..."></textarea></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('m-colab')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarColab()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ficha do Colaborador -->
+<div class="moverlay" id="m-ficha">
+  <div class="modal wide">
+    <div class="mhead">
+      <div><div class="mtitle" id="ficha-title">Ficha do Colaborador</div><div class="msub" id="ficha-sub"></div></div>
+      <button class="mclose" onclick="closeModal('m-ficha')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="ficha-body"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('m-ficha')">Fechar</button>
+      <button class="btn btn-primary" onclick="imprimirFicha(this)" id="ficha-print-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 6,2 18,2 18,9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir Ficha
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ajuste de Estoque -->
+<div class="moverlay" id="m-ajuste">
+  <div class="modal narrow">
+    <div class="mhead">
+      <div><div class="mtitle">Ajuste de Estoque</div><div class="msub" id="aj-sub"></div></div>
+      <button class="mclose" onclick="closeModal('m-ajuste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <input type="hidden" id="aj-id">
+    <div class="fg"><label class="flabel">Nova Quantidade</label><input type="number" class="finput" id="aj-qty" min="0"></div>
+    <div class="fg"><label class="flabel">Motivo</label><input class="finput" id="aj-motivo" placeholder="Inventário, Perda..."></div>
+    <div class="fg"><label class="flabel">Responsável</label><input class="finput" id="aj-resp" placeholder="Nome"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('m-ajuste')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAjuste()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Relatório de Entrega (impressão) -->
+<div class="moverlay" id="m-relentrega">
+  <div class="modal wide">
+    <div class="mhead">
+      <div><div class="mtitle">Comprovante de Entrega</div><div class="msub" id="re-sub"></div></div>
+      <button class="mclose" onclick="closeModal('m-relentrega')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="re-body"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('m-relentrega')">Fechar</button>
+      <button class="btn btn-primary" onclick="imprimirRelEntrega()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 6,2 18,2 18,9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir Ficha de EPI
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- ══════════ SCRIPT ══════════ -->
+<script>
+// ── MODO DE ARMAZENAMENTO ──
+// FB_MODE = true  → dados no Firebase (tempo real, compartilhado)
+// FB_MODE = false → dados no localStorage (local, offline)
+let FB_MODE = false; // será true após firebase inicializar com credenciais válidas
+
+const K = { items:'ax_items', mv:'ax_mv', colabs:'ax_colabs', resp:'ax_resp', seed:'ax_seed_v6' };
+const FB_PATH = { items:'items', mv:'movimentos', colabs:'colaboradores', resp:'responsabilidades' };
+
+// ── CACHE LOCAL (espelho do Firebase para leitura síncrona) ──
+const CACHE = { ax_items:[], ax_mv:[], ax_colabs:[], ax_resp:[] };
+
+// ── FUNÇÕES DE STORAGE (API unificada) ──
+const load = k => CACHE[k] || [];
+
+function save(k, v){
+  CACHE[k] = v;
+  if(FB_MODE && window.FB && window.FB.configured){
+    const path = FB_PATH[k] || k;
+    // Firebase não aceita arrays — converte para objeto indexado por id
+    let obj;
+    if(Array.isArray(v)){
+      obj = {};
+      v.forEach(item => { if(item && item.id) obj[item.id] = item; });
+    } else {
+      obj = v || null;
+    }
+    window.FB.set(path, obj).catch(e => console.warn('Firebase write error:', e));
+  } else {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){}
+  }
+}
+const gid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const fmt = d => new Date(d).toLocaleDateString('pt-BR');
+const fmtdt = d => new Date(d).toLocaleString('pt-BR');
+
+// ── SEED (EPIs/EPCs completos com uniformes por tamanho) ──
+function seedData(){
+  // Em modo Firebase, seed é aplicado apenas uma vez via FB
+  // Em modo localStorage, verifica chave local
+  if(FB_MODE){
+    // seed via Firebase já tratado em syncFromFirebase
+    return;
+  }
+  if(localStorage.getItem(K.seed)) return;
+  // Limpa storage
+  [K.items, K.mv, K.colabs, K.resp].forEach(k => { CACHE[k]=[]; localStorage.removeItem(k); });
+
+  // Padrão de código: XXXXX-NNN
+  // UNI = Uniforme, EPI = EPI individual, EPC = Coletivo
+  // Sequência numérica contínua por prefixo, 3 dígitos com zeros à esquerda
+
+  const UNIFORMS = [
+    // ── UNI-001 a UNI-006 · Camiseta FR ──
+    ...['PP','P','M','G','GG','XG'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+1).padStart(3,'0')}`,ca:'46439',nome:'Camiseta Manga Longa FR (Retardante a Chamas)',size:sz,categoria:'Uniforme - Camiseta FR',qty:sz==='M'||sz==='G'?40:sz==='GG'?25:15,min:sz==='M'||sz==='G'?15:8,unidade:'un',local:'Armário U1',desc:`Camiseta manga longa FR (flame resistant) NFPA 70E, Cal 8. Proteção contra arco elétrico. Tamanho ${sz}. Lavável e reutilizável.`})),
+    // ── UNI-007 a UNI-012 · Calça FR ──
+    ...['PP','P','M','G','GG','XG'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+7).padStart(3,'0')}`,ca:'46441',nome:'Calça FR (Retardante a Chamas)',size:sz,categoria:'Uniforme - Calça FR',qty:sz==='M'||sz==='G'?35:sz==='GG'?20:12,min:sz==='M'||sz==='G'?12:6,unidade:'un',local:'Armário U1',desc:`Calça FR NFPA 70E, Cal 8. Proteção contra arco elétrico e respingos. Tamanho ${sz}.`})),
+    // ── UNI-013 a UNI-017 · Macacão FR ──
+    ...['P','M','G','GG','XG'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+13).padStart(3,'0')}`,ca:'46443',nome:'Macacão FR Categoria 2 com Capuz',size:sz,categoria:'Uniforme - Macacão FR',qty:sz==='M'||sz==='G'?12:8,min:sz==='M'||sz==='G'?5:3,unidade:'un',local:'Armário U2',desc:`Macacão FR Cat.2 (ATPV ≥ 8 cal/cm²), zíper metálico e capuz integrado. Tamanho ${sz}.`})),
+    // ── UNI-018 a UNI-021 · Colete Refletivo ──
+    ...['P','M','G','GG'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+18).padStart(3,'0')}`,ca:'38.905',nome:'Colete Refletivo Alta Visibilidade',size:sz,categoria:'Uniforme - Colete',qty:sz==='M'||sz==='G'?30:20,min:sz==='M'||sz==='G'?10:6,unidade:'un',local:'Armário U2',desc:`Colete com faixas refletivas 360° classe 2 (EN ISO 20471). Tamanho ${sz}.`})),
+    // ── UNI-022 a UNI-029 · Botina Dielétrica ──
+    ...['38','39','40','41','42','43','44','45'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+22).padStart(3,'0')}`,ca:'44.285',nome:'Botina Dielétrica Bico PVC Antiderrapante',size:sz,categoria:'Uniforme - Calçado',qty:sz>='40'&&sz<='43'?15:8,min:sz>='40'&&sz<='43'?6:3,unidade:'par',local:'Armário U3',desc:`Botina CA bico PVC não metálico, solado antiderrapante e antiestático, Classe dielétrica. Número ${sz}.`})),
+    // ── UNI-030 a UNI-037 · Botina Biqueira de Aço ──
+    ...['38','39','40','41','42','43','44','45'].map((sz,i)=>({id:gid(),codigo:`UNI-${String(i+30).padStart(3,'0')}`,ca:'44.287',nome:'Botina Biqueira de Aço e Palmilha',size:sz,categoria:'Uniforme - Calçado',qty:sz>='40'&&sz<='43'?10:5,min:sz>='40'&&sz<='43'?4:2,unidade:'par',local:'Armário U3',desc:`Botina CA biqueira e palmilha de aço, solado antiderrapante. Para obras e risco de perfuração. Número ${sz}.`})),
+  ];
+
+  const EPIS = [
+    // ── EPI · Cabeça ──
+    {id:gid(),codigo:'EPI-001',ca:'35.543',nome:'Capacete Classe B (Dielétrico) — Branco',size:'',categoria:'EPI - Cabeça',qty:130,min:40,unidade:'un',local:'Estante A1',desc:'Classe B dielétrico, proteção contra choque até 20.000V. Norma NBR 8221.'},
+    {id:gid(),codigo:'EPI-002',ca:'35.543',nome:'Capacete Classe B com Jugular e Carneira',size:'',categoria:'EPI - Cabeça',qty:50,min:20,unidade:'un',local:'Estante A1',desc:'Capacete Classe B com jugular fixador e carneira regulável de 6 pontos. Cor amarela.'},
+    {id:gid(),codigo:'EPI-003',ca:'14.045',nome:'Protetor Auricular Tipo Concha',size:'',categoria:'EPI - Cabeça',qty:60,min:20,unidade:'un',local:'Estante A2',desc:'Concha acoplável ao capacete, NRRsf mínimo 17dB.'},
+    {id:gid(),codigo:'EPI-004',ca:'14.322',nome:'Protetor Auricular Tipo Plug Espuma (par)',size:'',categoria:'EPI - Cabeça',qty:500,min:200,unidade:'par',local:'Estante A2',desc:'Plug espuma expansível descartável, NRRsf 15dB.'},
+    // ── EPI · Ocular/Facial ──
+    {id:gid(),codigo:'EPI-005',ca:'11.285',nome:'Óculos de Segurança Incolor',size:'',categoria:'EPI - Ocular/Facial',qty:150,min:50,unidade:'un',local:'Estante A3',desc:'Lente policarbonato incolor, antirrisco e anti-UV. ANSI Z87.1.'},
+    {id:gid(),codigo:'EPI-006',ca:'11.285',nome:'Óculos de Segurança Escuro UV400',size:'',categoria:'EPI - Ocular/Facial',qty:80,min:30,unidade:'un',local:'Estante A3',desc:'Lente escura UV400 para trabalho externo. ANSI Z87.1.'},
+    {id:gid(),codigo:'EPI-007',ca:'11.285',nome:'Protetor Facial Face Shield (Policarbonato)',size:'',categoria:'EPI - Ocular/Facial',qty:40,min:15,unidade:'un',local:'Estante A3',desc:'Viseira inteiriça 1mm, proteção contra arco elétrico. Acoplável ao capacete.'},
+    {id:gid(),codigo:'EPI-008',ca:'11.285',nome:'Máscara de Solda Auto-Escurecimento',size:'',categoria:'EPI - Ocular/Facial',qty:10,min:4,unidade:'un',local:'Estante A3',desc:'Lente auto-escurecedora DIN 9–13 para solda elétrica e corte.'},
+    // ── EPI · Respiratório ──
+    {id:gid(),codigo:'EPI-009',ca:'40.903',nome:'Respirador PFF2 Sem Válvula',size:'',categoria:'EPI - Respiratório',qty:300,min:100,unidade:'un',local:'Estante B1',desc:'Máscara PFF2 (N95) descartável. Proteção contra poeiras e aerossóis.'},
+    {id:gid(),codigo:'EPI-010',ca:'40.903',nome:'Respirador PFF3 com Válvula',size:'',categoria:'EPI - Respiratório',qty:100,min:40,unidade:'un',local:'Estante B1',desc:'PFF3 com válvula exalatória. Para fumos metálicos e ozônio.'},
+    {id:gid(),codigo:'EPI-011',ca:'40.903',nome:'Respirador Semifacial com Filtro A2P3',size:'',categoria:'EPI - Respiratório',qty:20,min:8,unidade:'un',local:'Estante B1',desc:'Semifacial reutilizável, filtro A2P3 (vapores orgânicos + partículas). Para espaços confinados.'},
+    {id:gid(),codigo:'EPI-012',ca:'40.903',nome:'Filtro Reposição A2P3 (par)',size:'',categoria:'EPI - Respiratório',qty:40,min:16,unidade:'par',local:'Estante B1',desc:'Filtro combinado A2P3 de reposição. Trocar após 40h de uso.'},
+    // ── EPI · Mãos ──
+    {id:gid(),codigo:'EPI-013',ca:'35.588',nome:'Luva Dielétrica Classe 00 (500V)',size:'',categoria:'EPI - Mãos',qty:60,min:25,unidade:'par',local:'Estante B2',desc:'Luva borracha Classe 00, tensão máx. 500V. Norma ABNT NBR IEC 60903.'},
+    {id:gid(),codigo:'EPI-014',ca:'35.589',nome:'Luva Dielétrica Classe 2 (17.000V)',size:'',categoria:'EPI - Mãos',qty:40,min:15,unidade:'par',local:'Estante B2',desc:'Luva borracha Classe 2, tensão máx. 17.000V. Média tensão.'},
+    {id:gid(),codigo:'EPI-015',ca:'32.876',nome:'Luva de Vaqueta (Raspa de Couro) — Cano Longo',size:'',categoria:'EPI - Mãos',qty:120,min:50,unidade:'par',local:'Estante B2',desc:'Proteção mecânica contra cortes e calor. Usada sobre luva dielétrica.'},
+    {id:gid(),codigo:'EPI-016',ca:'32.876',nome:'Luva de Malha de Aço Anticorte (nível F)',size:'',categoria:'EPI - Mãos',qty:20,min:8,unidade:'par',local:'Estante B2',desc:'Malha de aço inox nível corte F (EN 388). Para manuseio de cabos e chapas.'},
+    {id:gid(),codigo:'EPI-017',ca:'32.876',nome:'Luva Nitrílica Descartável (cx 100un)',size:'',categoria:'EPI - Mãos',qty:30,min:10,unidade:'cx',local:'Estante B3',desc:'Luva nitrílica sem pó. Para produtos químicos leves e limpeza de contatos.'},
+    // ── EPI · Pés ──
+    {id:gid(),codigo:'EPI-018',ca:'39.878',nome:'Bota de PVC Cano Alto Impermeável',size:'',categoria:'EPI - Pés',qty:30,min:10,unidade:'par',local:'Estante C1',desc:'Bota PVC impermeável, antiderrapante. Para valas alagadas e chuva.'},
+    // ── EPI · Corpo ──
+    {id:gid(),codigo:'EPI-019',ca:'32.879',nome:'Avental de Raspa de Couro (soldagem)',size:'',categoria:'EPI - Corpo',qty:20,min:8,unidade:'un',local:'Estante C2',desc:'Avental couro longo para soldagem elétrica e corte. Proteção térmica.'},
+    // ── EPI · Queda ──
+    {id:gid(),codigo:'EPI-020',ca:'35.571',nome:'Cinto Paraquedista 5 Pontos + Talabarte Y',size:'',categoria:'EPI - Queda',qty:50,min:20,unidade:'un',local:'Estante D1',desc:'Cinto paraquedista + talabarte Y duplo com absorvedor de energia. NBR 35875.'},
+    {id:gid(),codigo:'EPI-021',ca:'35.571',nome:'Talabarte Simples com Absorvedor de Energia',size:'',categoria:'EPI - Queda',qty:30,min:10,unidade:'un',local:'Estante D1',desc:'Talabarte simples, gancho dupla trava e absorvedor. Comprimento 1,80m.'},
+    {id:gid(),codigo:'EPI-022',ca:'35.571',nome:'Trava-Quedas Retrátil 6m (inercial)',size:'',categoria:'EPI - Queda',qty:15,min:5,unidade:'un',local:'Estante D1',desc:'Retrátil 6m, carcaça alumínio, cabo aço inox. Bloqueio automático. EN 360.'},
+    {id:gid(),codigo:'EPI-023',ca:'35.571',nome:'Trava-Quedas Retrátil 15m',size:'',categoria:'EPI - Queda',qty:8,min:3,unidade:'un',local:'Estante D1',desc:'Retrátil 15m para torres de transmissão e postes de alta tensão.'},
+    {id:gid(),codigo:'EPI-024',ca:'35.571',nome:'Mosquetão de Aço Dupla Trava 25kN',size:'',categoria:'EPI - Queda',qty:60,min:20,unidade:'un',local:'Estante D2',desc:'Mosquetão oval aço forjado 25kN, trava dupla. Para talabartes e linhas de vida.'},
+    {id:gid(),codigo:'EPI-025',ca:'35.571',nome:'Corda de Segurança PP 16mm (rolo 50m)',size:'',categoria:'EPI - Queda',qty:10,min:4,unidade:'rolo',local:'Estante D2',desc:'Corda estática PP 16mm, resistência 2.400kg. Linha de vida horizontal.'},
+    {id:gid(),codigo:'EPI-026',ca:'35.571',nome:'Abraçadeira de Ancoragem para Poste',size:'',categoria:'EPI - Queda',qty:20,min:8,unidade:'un',local:'Estante D2',desc:'Presilha regulável Ø100–350mm, aço galvanizado. Para ancoragem em postes.'},
+    // ── EPI · Elétrico ──
+    {id:gid(),codigo:'EPI-027',ca:'35.590',nome:'Manga Isolante Dielétrica Classe 00 (500V)',size:'',categoria:'EPI - Elétrico',qty:30,min:10,unidade:'par',local:'Estante E1',desc:'Manga borracha Classe 00 (500V). Protege o antebraço em baixa tensão.'},
+    {id:gid(),codigo:'EPI-028',ca:'35.591',nome:'Manga Isolante Dielétrica Classe 2 (17kV)',size:'',categoria:'EPI - Elétrico',qty:15,min:5,unidade:'par',local:'Estante E1',desc:'Manga isolante Classe 2 (17.000V) para média tensão. ABNT NBR IEC 60903.'},
+    {id:gid(),codigo:'EPI-029',ca:'46.439',nome:'Balaclava FR Antichamas',size:'',categoria:'EPI - Elétrico',qty:50,min:20,unidade:'un',local:'Estante E1',desc:'Balaclava FR, proteção de face e pescoço contra arco. ATPV 12 cal/cm².'},
+    {id:gid(),codigo:'EPI-030',ca:'38.094',nome:'Tapete Dielétrico 1mx1m Classe 00',size:'',categoria:'EPI - Elétrico',qty:10,min:4,unidade:'un',local:'Estante E2',desc:'Tapete borracha Classe 00 (750V) para frente de painéis elétricos. ABNT NBR IEC 61111.'},
+    {id:gid(),codigo:'EPI-031',ca:'N/A',nome:'Detector de Tensão Sem Contato (caneta)',size:'',categoria:'EPI - Elétrico',qty:25,min:10,unidade:'un',local:'Estante E2',desc:'Detector CA sem contato 12–1000V, alarme sonoro e luminoso.'},
+    {id:gid(),codigo:'EPI-032',ca:'38.094',nome:'Cobertura Isolante para Cabo Energizado (Blanket)',size:'',categoria:'EPI - Elétrico',qty:20,min:8,unidade:'un',local:'Estante E1',desc:'Rubber blanket Classe 2 para proteção de cabos energizados durante manutenção em vivo.'},
+    // ── EPC · Sinalização ──
+    {id:gid(),codigo:'EPC-001',ca:'N/A',nome:'Cone de Sinalização 75cm Laranja',size:'',categoria:'EPC - Sinalização',qty:80,min:30,unidade:'un',local:'Galpão F1',desc:'Cone PVC laranja com faixa refletiva. Isolamento de área de trabalho.'},
+    {id:gid(),codigo:'EPC-002',ca:'N/A',nome:'Fita Zebrada Amarela/Preta (rolo 200m)',size:'',categoria:'EPC - Sinalização',qty:30,min:10,unidade:'rolo',local:'Galpão F1',desc:'Fita polietileno 70mm x 200m. Delimitação de áreas de risco.'},
+    {id:gid(),codigo:'EPC-003',ca:'N/A',nome:'Fita Zebrada Vermelha/Branca — Perigo (rolo 200m)',size:'',categoria:'EPC - Sinalização',qty:20,min:8,unidade:'rolo',local:'Galpão F1',desc:'Fita vermelha e branca para áreas de perigo imediato e serviços energizados.'},
+    {id:gid(),codigo:'EPC-004',ca:'N/A',nome:'Placa "Cuidado — Risco de Choque Elétrico"',size:'',categoria:'EPC - Sinalização',qty:30,min:12,unidade:'un',local:'Galpão F2',desc:'Placa PVC 20x30cm com símbolo de raio. Norma NBR 7195.'},
+    {id:gid(),codigo:'EPC-005',ca:'N/A',nome:'Placa "NÃO LIGUE — Equipe Trabalhando"',size:'',categoria:'EPC - Sinalização',qty:25,min:10,unidade:'un',local:'Galpão F2',desc:'Placa LOTO vermelha 20x30cm para travamento de disjuntores durante manutenção.'},
+    // ── EPC · LOTO ──
+    {id:gid(),codigo:'EPC-006',ca:'N/A',nome:'Cadeado de Bloqueio LOTO Vermelho',size:'',categoria:'EPC - LOTO',qty:50,min:20,unidade:'un',local:'Estante G1',desc:'Cadeado LOTO alumínio haste 38mm, cor vermelha, chave exclusiva.'},
+    {id:gid(),codigo:'EPC-007',ca:'N/A',nome:'Haspe de Bloqueio (Lockout Hasp) 6 posições',size:'',categoria:'EPC - LOTO',qty:15,min:6,unidade:'un',local:'Estante G1',desc:'Haspe aço 6 posições para múltiplos cadeados. Bloqueio simultâneo da equipe.'},
+    {id:gid(),codigo:'EPC-008',ca:'N/A',nome:'Maleta Kit LOTO Completo',size:'',categoria:'EPC - LOTO',qty:5,min:2,unidade:'un',local:'Estante G1',desc:'Kit LOTO: 6 cadeados, 2 haspes, bloqueadores de disjuntor, etiquetas.'},
+    // ── EPC · Elétrico Coletivo ──
+    {id:gid(),codigo:'EPC-009',ca:'N/A',nome:'Aterramento Temporário Portátil (kit 3 fases)',size:'',categoria:'EPC - Elétrico Coletivo',qty:8,min:3,unidade:'kit',local:'Estante H1',desc:'Aterramento 3 fases + neutro, cabo 35mm², grampos tipo C. NBR IEC 60900.'},
+    {id:gid(),codigo:'EPC-010',ca:'N/A',nome:'Bastão Detector de Tensão AT (até 36kV)',size:'',categoria:'EPC - Elétrico Coletivo',qty:5,min:2,unidade:'un',local:'Estante H1',desc:'Bastão detector AT até 36kV, telescópico 2,5m. Norma IEC 61243-1.'},
+    {id:gid(),codigo:'EPC-011',ca:'N/A',nome:'Pértiga Isolante (vara de manobra) 3m',size:'',categoria:'EPC - Elétrico Coletivo',qty:6,min:2,unidade:'un',local:'Estante H2',desc:'Pértiga fibra de vidro 3m para manobra de chaves em MT/AT. IEC 60900.'},
+    {id:gid(),codigo:'EPC-012',ca:'N/A',nome:'Escada Isolante Fibra de Vidro 6m Extensível',size:'',categoria:'EPC - Elétrico Coletivo',qty:5,min:2,unidade:'un',local:'Galpão H',desc:'Escada extensível fibra de vidro dielétrica 6m, 150kg. ABNT NBR 6832.'},
+    {id:gid(),codigo:'EPC-013',ca:'N/A',nome:'Extintor CO₂ 6kg (Classe C — Elétrico)',size:'',categoria:'EPC - Elétrico Coletivo',qty:15,min:6,unidade:'un',local:'Galpão H',desc:'Extintor CO₂ 6kg. Não condutivo, não deixa resíduos. Para subestações e painéis.'},
+    {id:gid(),codigo:'EPC-014',ca:'N/A',nome:'Extintor Pó Químico ABC 4kg',size:'',categoria:'EPC - Elétrico Coletivo',qty:20,min:8,unidade:'un',local:'Galpão H',desc:'Extintor pó ABC 4kg para incêndios Classe A, B e C.'},
+    // ── EPC · Altura ──
+    {id:gid(),codigo:'EPC-015',ca:'N/A',nome:'Linha de Vida Horizontal Provisória (kit 10m)',size:'',categoria:'EPC - Altura',qty:6,min:2,unidade:'kit',local:'Estante D3',desc:'Linha de vida horizontal cabo aço 10m com tensor e ancoragens. Até 2 usuários.'},
+    // ── EPC · Primeiros Socorros ──
+    {id:gid(),codigo:'EPC-016',ca:'N/A',nome:'Kit Primeiros Socorros Completo',size:'',categoria:'EPC - Primeiros Socorros',qty:10,min:4,unidade:'kit',local:'Estante J1',desc:'Ataduras, curativos, gazes, esparadrapo, tesoura, pinça, luvas, soro fisiológico.'},
+    {id:gid(),codigo:'EPC-017',ca:'N/A',nome:'DEA — Desfibrilador Externo Automático',size:'',categoria:'EPC - Primeiros Socorros',qty:2,min:1,unidade:'un',local:'Estante J1',desc:'DEA portátil com instruções de voz. Verificar eletrodos e bateria mensalmente.'},
+    // ── EPC · Espaço Confinado ──
+    {id:gid(),codigo:'EPC-018',ca:'N/A',nome:'Detector Multigás Portátil (O₂, CO, H₂S, LEL)',size:'',categoria:'EPC - Espaço Confinado',qty:5,min:2,unidade:'un',local:'Estante K1',desc:'Monitor 4 gases: O₂, CO, H₂S e explosivos (LEL). Alarme sonoro, visual e vibratório.'},
+    {id:gid(),codigo:'EPC-019',ca:'N/A',nome:'Tripé de Resgate com Talha Manual 5m',size:'',categoria:'EPC - Espaço Confinado',qty:3,min:1,unidade:'un',local:'Galpão K',desc:'Tripé alumínio ajustável 3m com talha 5m. Para resgate em poços e câmaras.'},
+  ];
+
+  save(K.items, [...UNIFORMS, ...EPIS]);
+  const SEED_COLABS = [
+    {id:gid(),nome:'ABDIAS SILVA COELHO',matricula:'173.700.782-72',cargo:'Ferramenteiro',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Afastado (INSS)',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ADAO FERREIRA LIMA',matricula:'878.848.791-15',cargo:'Trabalhador de Manutenção de Edificações I',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ADEMILSON GOMES DE MATOS',matricula:'020.397.991-50',cargo:'Operador de Retroescavadeira',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ANDERSON CEZAR REIS',matricula:'798.898.671-68',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: LUNDIN MINING · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'EDUARDO PEREIRA DE JESUS',matricula:'038.196.741-79',cargo:'Pedreiro',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Afastado (INSS)',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ERIK NUNES WANDERMUREM',matricula:'712.677.311-09',cargo:'Técnico em Segurança do Trabalho',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'HEITTOR JUNIOR PIRES AMARAL',matricula:'065.107.221-27',cargo:'Auxiliar de Logística',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'KARITA MOURA AGUIAR',matricula:'020.309.231-76',cargo:'Supervisor Técnico',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'KEREN KAROLINE PEREIRA DE CASTRO',matricula:'062.988.741-19',cargo:'Assistente Administrativo',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'MARCOS VINICIUS MENDES DA SILVA',matricula:'064.519.571-51',cargo:'Operador de Caminhão Munck I',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Férias',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'MATEUS ANGELO DE OLIVEIRA',matricula:'056.395.561-96',cargo:'Auxiliar Administrativo',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ROGERIO CAMBUI DOS SANTOS',matricula:'011.132.461-03',cargo:'Gerente de Contratos',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'TIAGO FERNANDES DIAS',matricula:'070.851.351-40',cargo:'Auxiliar de Mecânico',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VALCIR COSTA DE OLIVEIRA',matricula:'623.189.421-53',cargo:'Trabalhador de Manutenção de Edificações I',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WANESSA APOLINARIO SOARES',matricula:'066.321.631-14',cargo:'Assistente Administrativo',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ZILTON ALVES DA SILVA',matricula:'705.432.321-15',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'DANYELLE FRANCA DE ALMEIDA',matricula:'022.929.001-90',cargo:'Técnico em Segurança do Trabalho',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'HAROLDO MANOEL RIBEIRO',matricula:'479.983.001-59',cargo:'Telhador',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOSE FRANCISCO PINHEIRO',matricula:'771.194.521-34',cargo:'Telhador',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LEONARDO FERREIRA PINTO',matricula:'030.833.381-04',cargo:'Técnico em Refrigeração',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'MARCOS VINICIUS CORDEIRO DA SILVA',matricula:'705.927.501-08',cargo:'Técnico em Eletrotécnica',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VALDECI JOSE PEREIRA',matricula:'993.025.351-34',cargo:'Soldador',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ANTONIO FERNANDES DA SILVA NETO',matricula:'663.153.523-91',cargo:'Eletricista de Manutenção LT',setor:'CESTE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: CESTE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'CLAYVER FELIPE CHAVES DA SILVA',matricula:'611.616.023-99',cargo:'Eletricista',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'EDIRAN AMORIM DE ALMEIDA',matricula:'924.125.991-49',cargo:'Eletricista de Manutenção LT Líder',setor:'CESTE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: CESTE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'FRANCISCO ALVES DE SOUSA',matricula:'083.024.427-12',cargo:'Técnico em Manutenção Elétrica',setor:'CESTE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: CESTE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'GERSON SOUSA SILVA',matricula:'054.259.123-58',cargo:'Técnico em Manutenção Elétrica',setor:'CESTE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: CESTE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LUCAS EDUARDO FERNANDES PEDROSA',matricula:'058.281.763-31',cargo:'Técnico em Manutenção Elétrica',setor:'CESTE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: CESTE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ARTHUR DE SOUSA CASTRO',matricula:'065.767.991-79',cargo:'Eletricista Auxiliar',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'CELSO BATISTA CORDEIRO',matricula:'599.790.971-91',cargo:'Eletricista',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Ferista',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ELISVAN ELIAS VERAS',matricula:'010.344.271-56',cargo:'Eletricista',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Ferista',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'FABIO MARQUES DE ALENCAR',matricula:'901.629.511-91',cargo:'Mecânico de Ar Condicionado e Refrigeração',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'GABRIEL DE SOUSA TORRES',matricula:'709.973.611-66',cargo:'Eletricista III',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOAO RIBEIRO PEREIRA',matricula:'887.045.051-15',cargo:'Mantenedor de Edificações',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOSE BATISTA NETO',matricula:'848.469.921-87',cargo:'Eletricista',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOSE MARIA RIBEIRO DE SENA',matricula:'547.507.091-15',cargo:'Ajudante de Obras',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LEILIANE DE OLIVEIRA RODRIGUES FREIRE',matricula:'038.638.721-42',cargo:'Técnico em Segurança do Trabalho',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VALDIR COSTA DE OLIVEIRA',matricula:'492.273.861-49',cargo:'Pedreiro',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'MARCOS RODRIGUES ARAUJO',matricula:'063.252.281-03',cargo:'Eletricista Montador LT',setor:'ENGIE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ENGIE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WANDER DA SILVA FARIAS',matricula:'470.599.741-72',cargo:'Eletricista Montador LT',setor:'ENGIE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ENGIE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ABIMAЕЛ BRAZ DE OLIVEIRA',matricula:'557.084.711-15',cargo:'Eletricista de Manutenção Industrial',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'UBERLÂNIO JOSE DE ANDRADE',matricula:'703.140.564-59',cargo:'Eletricista Montador',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: AURA SERRA GRANDE · Status: Baixado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WAGNO HUNGRIA BORGES DE LIMA',matricula:'008.441.961-00',cargo:'Eletricista Montador',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'DOUGLAS HENRIQUE SILVA TAVARES',matricula:'710.264.241-51',cargo:'Operador de Máquinas I',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LUCAS GOMES DE JESUS',matricula:'054.967.591-45',cargo:'Auxiliar Geral',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VILMAR GOMES BRANQUINHO',matricula:'774.167.321-15',cargo:'Operador de Caminhão Munck I',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WESLEY GOMES BRANQUINHO',matricula:'956.291.301-53',cargo:'Mecânico Industrial',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'SEBASTIAO PEREIRA DE CARVALHO',matricula:'586.806.751-72',cargo:'Operador de Caminhão Munck I',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: ELETROMUK · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'GESIEL GOMES RODRIGUES',matricula:'031.962.571-00',cargo:'Eletricista',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JUNIOR ALVES DE ALBERGARIA',matricula:'885.134.321-72',cargo:'Operador de Caminhão Munck I',setor:'AURA ALMAS',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: AURA ALMAS · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'IVALDO FERREIRA DOS SANTOS',matricula:'786.841.611-49',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LEONARDO DE FARIA QUINTINO',matricula:'876.777.411-34',cargo:'Supervisor de Elétrica',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'LUCAS FERREIRA GOMES',matricula:'044.042.811-45',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'NILTON CESAR LOPES COELHO',matricula:'873.230.951-15',cargo:'Eletricista',setor:'VERENE ENERGIA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Serviços · Cliente: VERENE ENERGIA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ADAELTO ALVES DOS SANTOS',matricula:'017.035.841-04',cargo:'Técnico em Eletrotécnica',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ADENILSON EVANGELISTA DE SOUSA',matricula:'974.151.621-53',cargo:'Técnico em Eletrotécnica',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'BRUNO RODRIGUES FERREIRA',matricula:'035.108.761-30',cargo:'Eletricista',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'DANILO RODRIGUES PEREIRA',matricula:'036.446.841-62',cargo:'Eletricista',setor:'AURA ALMAS',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA ALMAS · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ELI OLIVEIRA DA SILVA',matricula:'530.889.991-68',cargo:'Gerente Administrativo',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JEFERSON RODRIGUES DOS REIS SOUZA',matricula:'702.287.711-45',cargo:'Coordenador Operacional',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOSE LUIZ PEREIRA GOMES',matricula:'717.967.111-87',cargo:'Mecânico Industrial',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ELETROMUK · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ROMARIO FERREIRA ROSA',matricula:'050.803.671-21',cargo:'Eletricista',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'TICYANNE DARLEY ALVES VILACA',matricula:'010.616.461-90',cargo:'Supervisor Administrativo',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ELETROMUK · Status: Administrativo',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'DOUGLAS MARQUES DELFINO',matricula:'716.650.821-35',cargo:'Eletricista Auxiliar',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'RODRIGO PEREIRA',matricula:'949.376.561-04',cargo:'Eletricista de Manutenção Industrial',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WALCLEYTON VIEIRA DE SOUZA',matricula:'053.652.861-62',cargo:'Pintor',setor:'MINERAÇÃO SERRA VERDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: MINERAÇÃO SERRA VERDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'PEDRO AFONSO DA SILVA',matricula:'877.000.851-53',cargo:'Eletricista Montador',setor:'ENGIE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ENGIE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'RIVAIR RABELO TEIXEIRA',matricula:'780.964.991-49',cargo:'Técnico em Eletrotécnica',setor:'ENGIE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ENGIE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VALDIRENE CHAVES LEITE',matricula:'862.255.371-04',cargo:'Eletricista Montador',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'ALEX BARBOSA DIAS',matricula:'106.373.121-63',cargo:'Ajudante de Mecânico Industrial',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'DONIZETE SOARES SOUZA',matricula:'008.449.041-12',cargo:'Técnico em Eletrotécnica',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: SAMA · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'FABIO TEIXEIRA DA SILVA',matricula:'943.580.361-04',cargo:'Eletricista',setor:'ELETROMUK',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: ELETROMUK · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'FREDSON LISBOA DA SILVA',matricula:'008.428.011-54',cargo:'Eletricista de Manutenção Industrial',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'GABRIEL JESUS CALDEIRA DE CARVALHO',matricula:'072.498.591-37',cargo:'Supervisor de Elétrica I',setor:'SAMA',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: SAMA · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'GENIEL RIBEIRO DA SILVA',matricula:'057.573.421-37',cargo:'Eletricista',setor:'AURA SERRA GRANDE',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA SERRA GRANDE · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'KLEVERTON OLIVEIRA NASCIMENTO',matricula:'055.490.625-26',cargo:'Eletricista',setor:'AURA ALMAS',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: AURA ALMAS · Status: Disponível',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'FABIO AUGUSTO LISBOA DIAS',matricula:'988.864.102-63',cargo:'Técnico em Eletrotécnica',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOAO VICTOR FERREIRA SANTIAGO',matricula:'615.420.623-22',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'JOSE APARECIDO DE SOUSA MOURA',matricula:'019.934.541-44',cargo:'Técnico em Eletrotécnica',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'VICTOR CUNHA AGUIAR',matricula:'034.226.121-57',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()},
+    {id:gid(),nome:'WELSON DOS SANTOS MARTINS',matricula:'616.195.063-43',cargo:'Eletricista',setor:'LUNDIN MINING',tRoupa:'',tCalcado:'',tel:'',obs:'Empresa: Eletromuk Manutenção · Cliente: LUNDIN MINING · Status: Alocado',criadoEm:new Date().toISOString()}
+  ];
+  save(K.colabs, SEED_COLABS);
+  localStorage.setItem(K.seed, '1');
+  // Em modo offline, persiste o cache gerado
+  [K.items,K.colabs].forEach(k => { try{ localStorage.setItem(k, JSON.stringify(CACHE[k]||[])); }catch(e){} });
+}
+
+// ── UTILS ──
+function status(item){
+  if(item.qty===0) return {l:'Sem Estoque',c:'b-red'};
+  if(item.qty<=item.min) return {l:'Estoque Baixo',c:'b-amber'};
+  return {l:'Normal',c:'b-green'};
+}
+function avatarColor(name){
+  const colors=['#4f8ef7','#2ecc9a','#f59e0b','#ef4444','#a78bfa','#f472b6','#38bdf8'];
+  let h=0; for(let c of name) h=(h<<5)-h+c.charCodeAt(0);
+  return colors[Math.abs(h)%colors.length];
+}
+function initials(name){ return name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') }
+
+// ── MODALS ──
+function open(id){ document.getElementById('m-'+id).classList.add('open') }
+function closeModal(id){
+  // suporta tanto o id completo (ex: 'm-item') quanto o curto (ex: 'item')
+  const el = document.getElementById(id) || document.getElementById('m-'+id);
+  if(el) el.classList.remove('open');
+}
+
+// ── NAV ──
+const TITLES={
+  dashboard:['Dashboard','Visão geral do almoxarifado'],
+  estoque:['Estoque','Gerenciar todos os itens'],
+  movimentos:['Movimentações','Histórico completo'],
+  colaboradores:['Colaboradores','Cadastro de funcionários'],
+  saida:['Entrega de EPIs','Saída de múltiplos itens por colaborador'],
+  devolucao:['Devolução','Retorno de itens ao estoque'],
+  relatorios:['Relatórios','Análises e indicadores'],
+};
+function nav(pg, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('pg-'+pg).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('pg-title').textContent=TITLES[pg][0];
+  document.getElementById('pg-sub').textContent=TITLES[pg][1];
+  const btn=document.getElementById('topbar-btn');
+  btn.textContent='';
+  if(pg==='estoque'){ btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo Item'; btn.onclick=openCadastro; btn.style.display=''; }
+  else if(pg==='colaboradores'){ btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo Colaborador'; btn.onclick=openCadCollab; btn.style.display=''; }
+  else btn.style.display='none';
+
+  if(pg==='dashboard') renderDash();
+  if(pg==='estoque'){ updateCatFilter(); renderEstoque(); }
+  if(pg==='movimentos') renderMovimentos();
+  if(pg==='colaboradores') renderColabs();
+  if(pg==='saida'){ populateSaidaColab(); renderSaidaPicker(); }
+  if(pg==='devolucao'){ populateDevColab(); }
+  if(pg==='relatorios') renderRelatorios();
+}
+
+// ── ITEM CRUD ──
+function openCadastro(){ document.getElementById('m-item-title').textContent='Cadastrar Item'; document.getElementById('item-id').value=''; ['item-codigo','item-nome','item-cat','item-ca','item-qty','item-min','item-local','item-desc'].forEach(id=>document.getElementById(id).value=''); document.getElementById('item-un').value='un'; document.getElementById('item-size').value=''; open('item'); }
+function openEdit(id){ const i=load(K.items).find(x=>x.id===id); if(!i) return; document.getElementById('m-item-title').textContent='Editar Item'; document.getElementById('item-id').value=i.id; document.getElementById('item-codigo').value=i.codigo; document.getElementById('item-nome').value=i.nome; document.getElementById('item-cat').value=i.categoria; document.getElementById('item-ca').value=i.ca||''; document.getElementById('item-qty').value=i.qty; document.getElementById('item-min').value=i.min; document.getElementById('item-un').value=i.unidade; document.getElementById('item-size').value=i.size||''; document.getElementById('item-local').value=i.local||''; document.getElementById('item-desc').value=i.desc||''; open('item'); }
+function salvarItem(){
+  const id=document.getElementById('item-id').value;
+  const codigo=document.getElementById('item-codigo').value.trim();
+  const nome=document.getElementById('item-nome').value.trim();
+  if(!nome||!codigo){ toast('Preencha código e nome.','err'); return; }
+  const obj={ codigo, nome, ca:document.getElementById('item-ca').value.trim()||'N/A', categoria:document.getElementById('item-cat').value.trim(), qty:parseInt(document.getElementById('item-qty').value)||0, min:parseInt(document.getElementById('item-min').value)||0, unidade:document.getElementById('item-un').value, size:document.getElementById('item-size').value, local:document.getElementById('item-local').value.trim(), desc:document.getElementById('item-desc').value.trim() };
+  let items=load(K.items);
+  if(id){ const ix=items.findIndex(i=>i.id===id); if(ix>-1){ const oldQty=items[ix].qty; items[ix]={...items[ix],...obj}; if(oldQty!==obj.qty) addMv({tipo:'ajuste',itemId:id,itemNome:nome,qty:Math.abs(obj.qty-oldQty),detalhe:'Edição de cadastro',resp:'Sistema'}); } }
+  else{ const ni={id:gid(),...obj,criadoEm:new Date().toISOString()}; items.push(ni); if(obj.qty>0) addMv({tipo:'entrada',itemId:ni.id,itemNome:nome,qty:obj.qty,detalhe:'Cadastro inicial',resp:'Sistema'}); }
+  save(K.items,items); closeModal('m-item'); renderDash(); renderEstoque(); updateCatFilter();
+  toast(id?'Item atualizado!':'Item cadastrado!','ok');
+}
+function deleteItem(id){ if(!confirm('Excluir este item?')) return; save(K.items, load(K.items).filter(i=>i.id!==id)); renderEstoque(); renderDash(); toast('Item removido.','ok'); }
+
+// ── AJUSTE ──
+function openAjuste(id){ const i=load(K.items).find(x=>x.id===id); if(!i) return; document.getElementById('aj-id').value=id; document.getElementById('aj-sub').textContent=i.nome+(i.size?` [${i.size}]`:'')+' · Atual: '+i.qty+' '+i.unidade; document.getElementById('aj-qty').value=i.qty; document.getElementById('aj-motivo').value=''; document.getElementById('aj-resp').value=''; open('ajuste'); }
+function confirmarAjuste(){ const id=document.getElementById('aj-id').value; const nq=parseInt(document.getElementById('aj-qty').value); const motivo=document.getElementById('aj-motivo').value.trim()||'Ajuste manual'; const resp=document.getElementById('aj-resp').value.trim()||'Não informado'; if(isNaN(nq)||nq<0){ toast('Quantidade inválida.','err'); return; } let items=load(K.items); const ix=items.findIndex(i=>i.id===id); if(ix<0) return; const diff=nq-items[ix].qty; items[ix].qty=nq; save(K.items,items); addMv({tipo:'ajuste',itemId:id,itemNome:items[ix].nome,qty:Math.abs(diff),detalhe:motivo+(diff>=0?' (+'+Math.abs(diff)+')':' (-'+Math.abs(diff)+')'),resp}); closeModal('m-ajuste'); renderEstoque(); renderDash(); toast('Estoque ajustado!','ok'); }
+
+// ── MOVIMENTOS ──
+function addMv(d){ const mvs=load(K.mv); mvs.unshift({id:gid(),...d,data:new Date().toISOString()}); save(K.mv,mvs); }
+
+// ── COLAB CRUD ──
+function openCadCollab(){ document.getElementById('m-colab-title').textContent='Novo Colaborador'; document.getElementById('colab-id').value=''; ['colab-nome','colab-mat','colab-cargo','colab-setor','colab-tel','colab-obs'].forEach(id=>document.getElementById(id).value=''); document.getElementById('colab-troupa').value=''; document.getElementById('colab-tcalc').value=''; open('colab'); }
+function editColab(id){ const c=load(K.colabs).find(x=>x.id===id); if(!c) return; document.getElementById('m-colab-title').textContent='Editar Colaborador'; document.getElementById('colab-id').value=c.id; document.getElementById('colab-nome').value=c.nome; document.getElementById('colab-mat').value=c.matricula||''; document.getElementById('colab-cargo').value=c.cargo||''; document.getElementById('colab-setor').value=c.setor||''; document.getElementById('colab-troupa').value=c.tRoupa||''; document.getElementById('colab-tcalc').value=c.tCalcado||''; document.getElementById('colab-tel').value=c.tel||''; document.getElementById('colab-obs').value=c.obs||''; open('colab'); }
+function salvarColab(){ const id=document.getElementById('colab-id').value; const nome=document.getElementById('colab-nome').value.trim(); if(!nome){ toast('Informe o nome.','err'); return; } const obj={ nome, matricula:document.getElementById('colab-mat').value.trim(), cargo:document.getElementById('colab-cargo').value.trim(), setor:document.getElementById('colab-setor').value.trim(), tRoupa:document.getElementById('colab-troupa').value, tCalcado:document.getElementById('colab-tcalc').value, tel:document.getElementById('colab-tel').value.trim(), obs:document.getElementById('colab-obs').value.trim() }; let colabs=load(K.colabs); if(id){ const ix=colabs.findIndex(c=>c.id===id); if(ix>-1) colabs[ix]={...colabs[ix],...obj}; } else { colabs.push({id:gid(),...obj,criadoEm:new Date().toISOString()}); } save(K.colabs,colabs); closeModal('m-colab'); renderColabs(); populateSaidaColab(); populateDevColab(); toast(id?'Colaborador atualizado!':'Colaborador cadastrado!','ok'); }
+function deleteColab(id){ if(!confirm('Excluir colaborador? Histórico de responsabilidades será mantido.')) return; save(K.colabs, load(K.colabs).filter(c=>c.id!==id)); renderColabs(); toast('Colaborador removido.','ok'); }
+
+// ── FICHA DO COLABORADOR ──
+function openFicha(id){
+  const c=load(K.colabs).find(x=>x.id===id);
+  if(!c) return;
+  const resp=load(K.resp).filter(r=>r.colabId===id);
+  document.getElementById('ficha-title').textContent=c.nome;
+  document.getElementById('ficha-sub').textContent=(c.cargo||'')+(c.setor?' · '+c.setor:'')+(c.matricula?' · Mat: '+c.matricula:'');
+  const col=avatarColor(c.nome);
+  let html=`<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap">
+    <div style="width:56px;height:56px;border-radius:50%;background:${col}22;border:2px solid ${col}44;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:20px;color:${col};flex-shrink:0">${initials(c.nome)}</div>
+    <div style="flex:1">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">${c.nome}</div>
+      <div style="font-size:12px;color:var(--t2);font-family:var(--mono)">${[c.cargo,c.setor,c.matricula?'Mat: '+c.matricula:'',c.tel].filter(Boolean).join(' · ')}</div>
+      ${c.tRoupa||c.tCalcado?`<div style="margin-top:6px;display:flex;gap:6px">
+        ${c.tRoupa?`<span class="badge b-purple">Roupa: ${c.tRoupa}</span>`:''}
+        ${c.tCalcado?`<span class="badge b-blue">Calçado: ${c.tCalcado}</span>`:''}
+      </div>`:''}
+    </div>
+  </div>`;
+  if(resp.length===0){
+    html+=`<div class="empty" style="padding:28px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;margin:0 auto 8px;display:block;opacity:.35"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg><p>Nenhum EPI sob responsabilidade.</p></div>`;
+  } else {
+    html+=`<div style="font-size:12px;color:var(--t2);margin-bottom:10px;font-family:var(--mono)">${resp.length} item(s) sob responsabilidade</div>`;
+    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
+    resp.forEach(r=>{
+      const i=load(K.items).find(x=>x.id===r.itemId);
+      const nm=i?i.nome:r.itemNome;
+      const sz=r.itemSize?` <span class="size-tag">${r.itemSize}</span>`:'';
+      html+=`<div class="resp-item">
+        <div style="width:34px;height:34px;border-radius:8px;background:rgba(79,142,247,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" style="width:16px;height:16px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="ri-info"><div class="ri-name">${nm}${sz}</div><div class="ri-sub">Qtd: ${r.qty} ${r.unidade||''} · Entregue em ${fmt(r.dataEntrega)} · Resp: ${r.resp||'—'}</div></div>
+        <div class="ri-date">${fmt(r.dataEntrega)}</div>
+        <button class="btn btn-sm btn-amber" onclick="devolverItemFicha('${r.id}','${id}')">Devolver</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  document.getElementById('ficha-body').innerHTML=html;
+  document.getElementById('ficha-print-btn').setAttribute('data-colab-id', id);
+  open('ficha');
+}
+
+function devolverItemFicha(respId, colabId){
+  devolverResp(respId);
+  closeModal('m-ficha');
+  setTimeout(()=>openFicha(colabId),100);
+}
+
+// ── ENTREGA MULTI-ITEM (SAÍDA) ──
+let cart=[];
+
+function populateSaidaColab(){
+  const colabs=load(K.colabs);
+  const sel=document.getElementById('saida-colab');
+  sel.innerHTML='<option value="">Escolha o colaborador...</option>'+colabs.map(c=>`<option value="${c.id}">${c.nome}${c.cargo?' — '+c.cargo:''}</option>`).join('');
+}
+
+function onSaidaColabChange(){
+  cart=[];
+  renderCart();
+  renderSaidaPicker();
+}
+
+function renderSaidaPicker(){
+  const q=(document.getElementById('saida-search')?.value||'').toLowerCase();
+  const items=load(K.items).filter(i=>i.qty>0&&(!q||i.nome.toLowerCase().includes(q)||i.codigo.toLowerCase().includes(q)||i.categoria.toLowerCase().includes(q)));
+  const pick=document.getElementById('saida-picker');
+  if(items.length===0){ pick.innerHTML=`<div class="empty" style="padding:20px"><p>Nenhum item disponível.</p></div>`; return; }
+  pick.innerHTML=items.map(i=>{
+    const inCart=cart.find(c=>c.itemId===i.id);
+    const sel=inCart?'selected':'';
+    const sz=i.size?`<span class="size-tag">${i.size}</span>`:'';
+    return `<div class="ip-row ${sel}" onclick="toggleCart('${i.id}',this)" data-id="${i.id}">
+      <div class="ip-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div>
+      <div class="ip-info">
+        <div class="ip-name">${i.nome}${sz}</div>
+        <div class="ip-sub">${i.codigo} · ${i.categoria}</div>
+      </div>
+      <div class="ip-qty-wrap" onclick="event.stopPropagation()">
+        <input type="number" min="1" max="${i.qty}" value="${inCart?inCart.qty:1}" id="qty-${i.id}" onchange="updateCartQty('${i.id}',this.value)" style="${inCart?'':'display:none'}">
+        <span class="ip-stock">Estq: ${i.qty}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCart(itemId, rowEl){
+  const items=load(K.items);
+  const item=items.find(i=>i.id===itemId);
+  if(!item) return;
+  const ix=cart.findIndex(c=>c.itemId===itemId);
+  if(ix>-1){ cart.splice(ix,1); rowEl.classList.remove('selected'); const qi=rowEl.querySelector('input'); if(qi) qi.style.display='none'; }
+  else { cart.push({itemId,itemNome:item.nome,itemSize:item.size||'',itemCa:item.ca||'N/A',unidade:item.unidade,qty:1,stock:item.qty,codigo:item.codigo}); rowEl.classList.add('selected'); const qi=document.getElementById('qty-'+itemId); if(qi) qi.style.display=''; }
+  renderCart();
+}
+
+function updateCartQty(itemId, val){
+  const ix=cart.findIndex(c=>c.itemId===itemId);
+  if(ix<0) return;
+  const q=Math.max(1,Math.min(parseInt(val)||1, cart[ix].stock));
+  cart[ix].qty=q;
+  const el=document.getElementById('qty-'+itemId);
+  if(el) el.value=q;
+  renderCart();
+}
+
+function removeFromCart(itemId){
+  cart=cart.filter(c=>c.itemId!==itemId);
+  renderSaidaPicker();
+  renderCart();
+}
+
+function renderCart(){
+  const cnt=document.getElementById('cart-count');
+  cnt.textContent=cart.length+' item'+(cart.length!==1?'s':'');
+  const list=document.getElementById('cart-list');
+  if(cart.length===0){ list.innerHTML=`<div class="empty" style="padding:24px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:.35"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><p>Selecione itens ao lado</p></div>`; return; }
+  list.innerHTML=`<div style="display:flex;flex-direction:column;gap:0">` + cart.map(c=>{
+    const sz=c.itemSize?`<span class="size-tag">${c.itemSize}</span>`:'';
+    return `<div class="cart-item">
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.itemNome}${sz}</div><div style="font-size:11px;color:var(--t2);font-family:var(--mono)">${c.codigo}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" min="1" max="${c.stock}" value="${c.qty}" style="width:52px;padding:4px 6px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;text-align:center;outline:none" onchange="updateCartQty('${c.itemId}',this.value)">
+        <span style="font-size:11px;color:var(--t3)">${c.unidade}</span>
+        <button class="cart-remove" onclick="removeFromCart('${c.itemId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function confirmarEntrega(){
+  const colabId=document.getElementById('saida-colab').value;
+  const resp=document.getElementById('saida-resp').value.trim()||'Não informado';
+  const obs=document.getElementById('saida-obs').value.trim();
+  if(!colabId){ toast('Selecione um colaborador.','err'); return; }
+  if(cart.length===0){ toast('Adicione pelo menos um item.','err'); return; }
+  const colabs=load(K.colabs);
+  const colab=colabs.find(c=>c.id===colabId);
+  let items=load(K.items);
+  let resps=load(K.resp);
+  const erros=[];
+  cart.forEach(ci=>{
+    const ix=items.findIndex(i=>i.id===ci.itemId);
+    if(ix<0||items[ix].qty<ci.qty){ erros.push(ci.itemNome); return; }
+    items[ix].qty-=ci.qty;
+    resps.push({ id:gid(), colabId, itemId:ci.itemId, itemNome:ci.itemNome, itemSize:ci.itemSize, qty:ci.qty, unidade:ci.unidade, dataEntrega:new Date().toISOString(), resp });
+    addMv({ tipo:'saida', itemId:ci.itemId, itemNome:ci.itemNome+(ci.itemSize?` [${ci.itemSize}]`:''), qty:ci.qty, detalhe:`Entregue para ${colab?.nome||colabId}. ${obs}`, resp });
+  });
+  if(erros.length>0){ toast('Estoque insuficiente: '+erros.join(', '),'err'); return; }
+  save(K.items,items); save(K.resp,resps);
+  const totalItens = cart.length;
+  mostrarRelatorioEntrega(colab, cart, resp, obs);
+  cart=[];
+  document.getElementById('saida-resp').value='';
+  document.getElementById('saida-obs').value='';
+  renderSaidaPicker();
+  renderCart();
+  renderDash();
+  toast(`Entrega confirmada! ${totalItens} tipo(s) de item entregue(s).`,'ok');
+}
+
+// ── RELATÓRIO DE ENTREGA ──
+function fichaEpiHTML(colab, itens, resp, obs, numDoc){
+  const now = new Date();
+  const dataFmt = now.toLocaleDateString('pt-BR');
+  const horaFmt = now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const docNum = numDoc || ('FE-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000)+1000));
+  const rows = itens.map((c,idx) => `
+    <tr>
+      <td style="text-align:center;font-size:11px;color:#6b7280">${idx+1}</td>
+      <td style="font-family:monospace;font-size:11px;color:#374151;white-space:nowrap">${c.codigo}</td>
+      <td style="font-size:12px;font-weight:600;color:#111827">${c.itemNome}</td>
+      <td style="text-align:center;font-family:monospace;font-size:11px;color:#059669;font-weight:600">${c.itemCa||'N/A'}</td>
+      <td style="text-align:center;font-size:11px">${c.itemSize ? '<span style="background:#ede9fe;color:#6d28d9;padding:2px 7px;border-radius:4px;font-weight:600;font-size:10px">'+c.itemSize+'</span>' : '—'}</td>
+      <td style="text-align:center;font-weight:700;font-size:13px;color:#111827">${c.qty}</td>
+      <td style="text-align:center;font-size:11px;color:#6b7280">${c.unidade}</td>
+      <td style="text-align:center"><div style="width:80px;height:18px;border-bottom:1px solid #9ca3af;margin:0 auto"></div></td>
+    </tr>`).join('');
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ficha de EPI — ${colab ? colab.nome : 'Colaborador'}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111827;font-size:13px;padding:28px 32px}
+.pw{max-width:780px;margin:0 auto}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #1e3a5f;margin-bottom:18px}
+.dl{display:flex;align-items:center;gap:12px}
+.di{width:44px;height:44px;background:#1e3a5f;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.di svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8}
+.dt{font-size:18px;font-weight:700;color:#1e3a5f;letter-spacing:-0.5px}
+.ds{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-top:1px}
+.dm{text-align:right}
+.dn{font-size:13px;font-weight:700;color:#1e3a5f;font-family:monospace;margin-bottom:3px}
+.dd{font-size:11px;color:#6b7280}
+.tb{background:#1e3a5f;color:#fff;text-align:center;padding:8px 16px;border-radius:6px;margin-bottom:18px}
+.tb h1{font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tb p{font-size:10px;opacity:.75;margin-top:2px}
+.cs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;margin-bottom:18px}
+.ch{grid-column:1/-1;background:#1e3a5f;color:#fff;padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.cf{padding:8px 14px;border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+.cf:nth-child(even){border-right:none}
+.cf:nth-last-child(-n+2){border-bottom:none}
+.cfl{font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:2px}
+.cfv{font-size:13px;font-weight:600;color:#111827}
+.it{background:#f3f4f6;border:1px solid #d1d5db;border-bottom:none;border-radius:6px 6px 0 0;padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#374151;display:flex;justify-content:space-between;align-items:center}
+table{width:100%;border-collapse:collapse;border:1px solid #d1d5db;border-radius:0 0 6px 6px;overflow:hidden;margin-bottom:18px}
+thead th{background:#1e3a5f;color:#fff;padding:8px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;text-align:left}
+thead th:not(:first-child){border-left:1px solid #2d4d73}
+tbody tr:nth-child(even){background:#f9fafb}
+tbody tr:last-child td{border-bottom:none}
+td{padding:9px 10px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+td:not(:first-child){border-left:1px solid #f3f4f6}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.ib2{border:1px solid #d1d5db;border-radius:6px;overflow:hidden}
+.ibh{background:#f3f4f6;padding:6px 12px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#374151;border-bottom:1px solid #d1d5db}
+.ibb{padding:8px 12px;font-size:12px;color:#111827;min-height:34px}
+.decl{border:1px solid #fcd34d;background:#fffbeb;border-radius:6px;padding:12px 16px;margin-bottom:18px}
+.decl p{font-size:10.5px;color:#92400e;line-height:1.7;text-align:justify}
+.sg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:18px}
+.sb{display:flex;flex-direction:column;align-items:center;gap:5px}
+.sl{width:100%;border-bottom:1.5px solid #374151;height:38px}
+.slb{font-size:10px;color:#374151;font-weight:600;text-align:center}
+.sls{font-size:9px;color:#9ca3af;text-align:center}
+.sld{border:1px solid #d1d5db;border-radius:4px;padding:3px 8px;font-size:10px;color:#6b7280;width:100%;text-align:center}
+.leg{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;margin-bottom:18px}
+.leg p{font-size:10px;color:#166534;line-height:1.6;margin:0}
+.df{padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center}
+.dfl{font-size:9px;color:#9ca3af;line-height:1.5}
+.dfr{font-size:9px;color:#9ca3af;font-family:monospace}
+@media print{body{padding:16px 20px}@page{margin:0.8cm;size:A4}}
+</style>
+</head>
+<body>
+<div class="pw">
+  <div class="dh">
+    <div class="dl">
+      <div class="di"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div><div class="dt">AlmoxControl</div><div class="ds">Gestão de Segurança do Trabalho</div></div>
+    </div>
+    <div class="dm"><div class="dn">${docNum}</div><div class="dd">Emitido em: ${dataFmt} às ${horaFmt}</div></div>
+  </div>
+  <div class="tb"><h1>Ficha de Controle de Entrega de EPI</h1><p>Equipamento de Proteção Individual — NR-6 / Portaria MTE nº 3.214/78</p></div>
+  <div class="cs">
+    <div class="ch">&#128100; Identificação do Colaborador</div>
+    <div class="cf"><div class="cfl">Nome Completo</div><div class="cfv">${colab ? colab.nome : '—'}</div></div>
+    <div class="cf"><div class="cfl">Matrícula / CPF</div><div class="cfv">${colab && colab.matricula ? colab.matricula : '—'}</div></div>
+    <div class="cf"><div class="cfl">Cargo / Função</div><div class="cfv">${colab && colab.cargo ? colab.cargo : '—'}</div></div>
+    <div class="cf"><div class="cfl">Setor / Equipe</div><div class="cfv">${colab && colab.setor ? colab.setor : '—'}</div></div>
+    <div class="cf"><div class="cfl">Tamanho de Roupa</div><div class="cfv">${colab && colab.tRoupa ? colab.tRoupa : '—'}</div></div>
+    <div class="cf"><div class="cfl">Número de Calçado</div><div class="cfv">${colab && colab.tCalcado ? colab.tCalcado : '—'}</div></div>
+  </div>
+  <div class="it"><span>&#9875; Equipamentos Entregues</span><span style="font-size:10px;font-weight:400;color:#6b7280">${itens.length} item(s) · Data: ${dataFmt}</span></div>
+  <table>
+    <thead><tr>
+      <th style="width:28px;text-align:center">#</th>
+      <th style="width:90px">Código</th>
+      <th>Descrição do EPI</th>
+      <th style="width:70px;text-align:center">C.A.</th>
+      <th style="width:65px;text-align:center">Tamanho</th>
+      <th style="width:42px;text-align:center">Qtd</th>
+      <th style="width:42px;text-align:center">Un.</th>
+      <th style="width:90px;text-align:center">Assinatura Rec.</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="ig">
+    <div class="ib2"><div class="ibh">&#128101; Responsável pela Entrega</div><div class="ibb"><strong>${resp||'—'}</strong><br><span style="font-size:10px;color:#6b7280">Almoxarifado / Segurança do Trabalho</span></div></div>
+    <div class="ib2"><div class="ibh">&#128203; Observações</div><div class="ibb">${obs||'Nenhuma observação registrada.'}</div></div>
+  </div>
+  <div class="decl"><p><strong>DECLARAÇÃO DO COLABORADOR:</strong> Declaro que recebi os Equipamentos de Proteção Individual (EPIs) listados acima, em perfeito estado de conservação, e que fui devidamente orientado quanto ao uso correto, guarda e conservação de cada item, bem como sobre os riscos que motivaram o fornecimento. Comprometo-me a utilizar os EPIs sempre que exigido, a comunicar qualquer deterioração ou perda imediatamente ao responsável, e estou ciente de que a recusa injustificada em utilizá-los constitui falta grave conforme o <strong>Art. 158 da CLT</strong>.</p></div>
+  <div style="font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#9ca3af;margin-bottom:12px">&#9998; Assinaturas e Confirmação</div>
+  <div class="sg">
+    <div class="sb"><div class="sl"></div><div class="slb">${colab ? colab.nome : 'Colaborador'}</div><div class="sls">Assinatura do Colaborador</div><div class="sld">Data: ____/____/______</div></div>
+    <div class="sb"><div class="sl"></div><div class="slb">${resp||'Responsável'}</div><div class="sls">Almoxarifado / Entregador</div><div class="sld">Data: ____/____/______</div></div>
+    <div class="sb"><div class="sl"></div><div class="slb">Segurança do Trabalho</div><div class="sls">SESMT / Técnico de Segurança</div><div class="sld">Data: ____/____/______</div></div>
+  </div>
+  <div class="leg"><p><strong>Base Legal:</strong> NR-6 (Portaria MTE nº 3.214/78) — O empregador é obrigado a fornecer ao empregado, gratuitamente, EPI adequado ao risco, em perfeito estado de conservação e funcionamento, conforme disposto nos Arts. 166 e 167 da CLT. O empregado é obrigado a usar o EPI fornecido, responsabilizando-se pela guarda e conservação. A recusa injustificada em usar o EPI configura falta grave, sujeita a advertência e demissão por justa causa (Art. 158 da CLT). Equipamentos com C.A. vencido não devem ser utilizados.</p></div>
+  <div class="df"><div class="dfl">AlmoxControl — Sistema de Gestão de EPIs<br>Documento gerado em ${dataFmt} às ${horaFmt} · Uso interno</div><div class="dfr">${docNum} · Pág. 1/1</div></div>
+</div>
+</body>
+</html>`;
+}
+
+function mostrarRelatorioEntrega(colab, itens, resp, obs){
+  const now = new Date();
+  const dataFmt = now.toLocaleDateString('pt-BR');
+  const docNum = 'FE-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000)+1000);
+  document.getElementById('re-sub').textContent = `Entrega para ${colab ? colab.nome : '—'} · ${dataFmt} · ${docNum}`;
+  const previewRows = itens.map((c,idx) => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px;font-size:11px;color:var(--t3);text-align:center">${idx+1}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-size:11px;color:var(--t2)">${c.codigo}</td>
+      <td style="padding:7px 10px;font-size:13px;font-weight:500">${c.itemNome}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-size:11px;color:var(--a2);text-align:center">${c.itemCa||'N/A'}</td>
+      <td style="padding:7px 10px;text-align:center">${c.itemSize?'<span class="size-tag">'+c.itemSize+'</span>':'—'}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-weight:600;text-align:center">${c.qty}</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--t2);text-align:center">${c.unidade}</td>
+    </tr>`).join('');
+  document.getElementById('re-body').innerHTML = `
+    <div style="background:rgba(46,204,154,.1);border:1px solid rgba(46,204,154,.3);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--a2)" stroke-width="2.5" style="width:22px;height:22px;flex-shrink:0"><polyline points="20,6 9,17 4,12"/></svg>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--a2)">Entrega registrada com sucesso!</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:2px">${itens.length} item(s) entregue(s) para <strong style="color:var(--text)">${colab ? colab.nome : '—'}</strong> &nbsp;·&nbsp; Protocolo: <span style="font-family:var(--mono)">${docNum}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      ${[['Colaborador',colab ? colab.nome : '—'],['Cargo',colab && colab.cargo ? colab.cargo : '—'],['Setor',colab && colab.setor ? colab.setor : '—'],['Matrícula',colab && colab.matricula ? colab.matricula : '—'],['Responsável',resp||'—'],['Data/Hora',new Date().toLocaleString('pt-BR')]].map(function(p){return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">'+p[0]+'</div><div style="font-size:13px;font-weight:500">'+p[1]+'</div></div>';}).join('')}
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px">
+      <thead><tr style="background:var(--s2)">
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:center">#</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:left">Código</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:left">Descrição do EPI</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:center">C.A.</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:center">Tam.</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:center">Qtd</th>
+        <th style="padding:8px 10px;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border);text-align:center">Un.</th>
+      </tr></thead>
+      <tbody>${previewRows}</tbody>
+    </table>
+    ${obs ? '<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Observações</div><div style="font-size:13px">'+obs+'</div></div>' : ''}
+    <div style="background:rgba(79,142,247,.07);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--t2)">
+      <strong style="color:var(--accent)">&#128221; Próximo passo:</strong> Clique em <strong>"Imprimir Ficha de EPI"</strong> para abrir o documento completo com declaração do colaborador, campos de assinatura (3 vias), base legal NR-6 e número de protocolo.
+    </div>`;
+  window._fichaData = { colab, itens, resp, obs, docNum };
+  open('relentrega');
+}
+
+// ── DEVOLUÇÃO ──
+function populateDevColab(){
+  const colabs=load(K.colabs);
+  const sel=document.getElementById('dev-colab');
+  sel.innerHTML='<option value="">Escolha o colaborador...</option>'+colabs.map(c=>`<option value="${c.id}">${c.nome}${c.cargo?' — '+c.cargo:''}</option>`).join('');
+  document.getElementById('dev-items-wrap').innerHTML='';
+}
+
+function renderDevItems(){
+  const colabId=document.getElementById('dev-colab').value;
+  const wrap=document.getElementById('dev-items-wrap');
+  if(!colabId){ wrap.innerHTML=''; return; }
+  const colab=load(K.colabs).find(c=>c.id===colabId);
+  const resp=load(K.resp).filter(r=>r.colabId===colabId);
+  if(resp.length===0){ wrap.innerHTML=`<div class="empty" style="padding:24px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:.35"><polyline points="20,6 9,17 4,12"/></svg><p>Nenhum EPI sob responsabilidade de ${colab?.nome||'este colaborador'}.</p></div>`; return; }
+  wrap.innerHTML=`<div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--t2)">${resp.length} item(s) para devolver</div>`+
+    resp.map(r=>{
+      const i=load(K.items).find(x=>x.id===r.itemId);
+      const nm=i?i.nome:r.itemNome;
+      const sz=r.itemSize?`<span class="size-tag">${r.itemSize}</span>`:'';
+      return `<div class="resp-item">
+        <div style="width:34px;height:34px;border-radius:8px;background:rgba(46,204,154,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--a2)" stroke-width="1.8" style="width:15px;height:15px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="ri-info"><div class="ri-name">${nm}${sz}</div><div class="ri-sub">Qtd: ${r.qty} ${r.unidade||''} · Entregue em ${fmt(r.dataEntrega)}</div></div>
+        <button class="btn btn-success btn-sm" onclick="devolverResp('${r.id}');renderDevItems()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Devolver
+        </button>
+      </div>`;
+    }).join('');
+}
+
+function devolverResp(respId){
+  let resps=load(K.resp);
+  const ix=resps.findIndex(r=>r.id===respId);
+  if(ix<0) return;
+  const r=resps[ix];
+  let items=load(K.items);
+  const iix=items.findIndex(i=>i.id===r.itemId);
+  if(iix>-1) items[iix].qty+=r.qty;
+  resps.splice(ix,1);
+  save(K.items,items); save(K.resp,resps);
+  addMv({ tipo:'devolucao', itemId:r.itemId, itemNome:r.itemNome+(r.itemSize?` [${r.itemSize}]`:''), qty:r.qty, detalhe:`Devolvido pelo colaborador`, resp:'Sistema' });
+  renderDash();
+  toast('Item devolvido ao estoque!','ok');
+}
+
+// ── IMPRESSÃO VIA IFRAME OCULTO (sem popup blocker) ──
+function printHTML(html){
+  // Remove qualquer iframe anterior
+  var old = document.getElementById('_print_frame');
+  if(old) old.remove();
+
+  // Cria iframe invisível
+  var iframe = document.createElement('iframe');
+  iframe.id = '_print_frame';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none';
+  document.body.appendChild(iframe);
+
+  var doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Aguarda o iframe renderizar antes de imprimir
+  iframe.onload = function(){
+    setTimeout(function(){
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(e) {
+        // fallback: abre em nova aba com blob url
+        var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+      }
+    }, 500);
+  };
+}
+
+// ── IMPRIMIR RELATÓRIO DE ENTREGA ──
+function imprimirRelEntrega(){
+  const d = window._fichaData;
+  if(!d){ toast('Dados da entrega não encontrados.','err'); return; }
+  printHTML(fichaEpiHTML(d.colab, d.itens, d.resp, d.obs, d.docNum));
+}
+
+// ── IMPRIMIR FICHA ──
+function imprimirFicha(btn){
+  const id = (btn || document.getElementById('ficha-print-btn')).getAttribute('data-colab-id') || window._printColabId;
+  const c = load(K.colabs).find(x => x.id === id);
+  if(!c){ toast('Colaborador não encontrado.','err'); return; }
+  const resps = load(K.resp).filter(r => r.colabId === id);
+  const itens = resps.map(r => {
+    const item = load(K.items).find(x => x.id === r.itemId);
+    return {
+      codigo: item ? item.codigo : '—',
+      itemNome: r.itemNome,
+      itemCa: item ? (item.ca || 'N/A') : 'N/A',
+      itemSize: r.itemSize || '',
+      qty: r.qty,
+      unidade: r.unidade || ''
+    };
+  });
+  const now = new Date();
+  const docNum = 'FF-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000)+1000);
+  printHTML(fichaEpiHTML(c, itens, 'Almoxarifado / Segurança do Trabalho', '', docNum));
+}
+
+// ── RENDERS ──
+function renderDash(){
+  const items=load(K.items);
+  document.getElementById('s-total').textContent=items.length;
+  document.getElementById('s-colab').textContent=load(K.colabs).length;
+  document.getElementById('s-low').textContent=items.filter(i=>i.qty>0&&i.qty<=i.min).length;
+  document.getElementById('s-zero').textContent=items.filter(i=>i.qty===0).length;
+  const crit=items.filter(i=>i.qty===0);
+  document.getElementById('dash-alerts').innerHTML=crit.slice(0,3).map(i=>`<div class="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span><strong>${i.nome}${i.size?' ['+i.size+']':''}</strong> — estoque zerado! Reabastecer urgente.</span></div>`).join('');
+  const crit2=items.filter(i=>i.qty<=i.min).sort((a,b)=>a.qty-b.qty);
+  const tb=document.getElementById('dash-tb');
+  const emp=document.getElementById('dash-empty');
+  if(crit2.length===0){ tb.innerHTML=''; emp.style.display='block'; }
+  else { emp.style.display='none'; tb.innerHTML=crit2.map(i=>{const st=status(i);return`<tr><td class="code">${i.codigo}</td><td><strong>${i.nome}</strong>${i.size?`<span class="size-tag">${i.size}</span>`:''}</td><td><span class="badge bg">${i.categoria}</span></td><td><span class="fw ${i.qty===0?'c-red':'c-amber'}">${i.qty} ${i.unidade}</span></td><td class="code">${i.min}</td><td><span class="badge ${st.c}">${st.l}</span></td></tr>`;}).join(''); }
+}
+
+function updateCatFilter(){
+  const cats=[...new Set(load(K.items).map(i=>i.categoria))].filter(Boolean).sort();
+  const sel=document.getElementById('est-cat'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+}
+
+function renderEstoque(){
+  const q=(document.getElementById('est-search')?.value||'').toLowerCase();
+  const cat=(document.getElementById('est-cat')?.value||'');
+  const items=load(K.items).filter(i=>(!q||i.nome.toLowerCase().includes(q)||i.codigo.toLowerCase().includes(q)||i.categoria.toLowerCase().includes(q))&&(!cat||i.categoria===cat));
+  const tb=document.getElementById('est-tb');
+  const emp=document.getElementById('est-empty');
+  updateCatFilter();
+  if(items.length===0){ tb.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none';
+  tb.innerHTML=items.map(i=>{
+    const st=status(i);
+    const sz=i.size?`<span class="size-tag">${i.size}</span>`:'';
+    return`<tr>
+      <td class="code">${i.codigo}</td>
+      <td><div class="fw">${i.nome}${sz}</div>${i.desc?`<div style="font-size:11px;color:var(--t3);margin-top:1px">${i.desc.slice(0,55)}${i.desc.length>55?'...':''}</div>`:''}</td>
+      <td><span class="badge bg">${i.categoria}</span></td>
+      <td><span class="code" style="font-size:11px;color:${i.ca&&i.ca!=='N/A'?'var(--a2)':'var(--t3)'}">${i.ca||'—'}</span></td>
+      <td style="font-size:11px;color:var(--t2)">${i.local||'—'}</td>
+      <td><span class="fw ${i.qty===0?'c-red':i.qty<=i.min?'c-amber':'c-green'}">${i.qty}</span></td>
+      <td class="code">${i.min}</td>
+      <td class="code">${i.unidade}</td>
+      <td><span class="badge ${st.c}">${st.l}</span></td>
+      <td><div class="act-row">
+        <button class="ib" onclick="openEdit('${i.id}')" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="ib ok" onclick="openAjuste('${i.id}')" title="Ajustar Estoque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button class="ib del" onclick="deleteItem('${i.id}')" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMovimentos(){
+  const mvs=load(K.mv);
+  const filt=document.getElementById('mv-filt')?.value||'';
+  const filtered=filt?mvs.filter(m=>m.tipo===filt):mvs;
+  const list=document.getElementById('mv-list');
+  const emp=document.getElementById('mv-empty');
+  if(filtered.length===0){ list.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none';
+  const icons={
+    entrada:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`,
+    saida:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+    devolucao:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/></svg>`,
+    ajuste:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  };
+  const icls={entrada:'c-green',saida:'c-red',devolucao:'c-blue',ajuste:'c-amber'};
+  const tlbl={entrada:'Entrada',saida:'Saída',devolucao:'Devolução',ajuste:'Ajuste'};
+  list.innerHTML=filtered.map(mv=>{
+    const d=new Date(mv.data);
+    const ds=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const sign=mv.tipo==='entrada'||mv.tipo==='devolucao'?'+':mv.tipo==='saida'?'-':'±';
+    const qcls=mv.tipo==='entrada'||mv.tipo==='devolucao'?'c-green':mv.tipo==='saida'?'c-red':'c-amber';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .1s" onmouseenter="this.style.background='var(--s2)'" onmouseleave="this.style.background=''">
+      <div style="width:34px;height:34px;border-radius:9px;background:rgba(var(--${icls[mv.tipo]=='c-green'?'a2':''}),0);display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:.85;color:${mv.tipo==='entrada'||mv.tipo==='devolucao'?'var(--a2)':mv.tipo==='saida'?'var(--danger)':'var(--a3)'}; background:${mv.tipo==='entrada'||mv.tipo==='devolucao'?'rgba(46,204,154,.1)':mv.tipo==='saida'?'rgba(239,68,68,.1)':'rgba(245,158,11,.1)'}">${icons[mv.tipo]||''}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${mv.itemNome}</div><div style="font-size:11px;color:var(--t2);font-family:var(--mono);margin-top:1px">${tlbl[mv.tipo]||mv.tipo}${mv.detalhe?' · '+mv.detalhe:''} · Resp: ${mv.resp||'—'}</div></div>
+      <div style="font-family:var(--mono);font-weight:500;font-size:14px" class="${qcls}">${sign}${mv.qty}</div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--mono);text-align:right;min-width:96px">${ds}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderColabs(){
+  const q=(document.getElementById('col-search')?.value||'').toLowerCase();
+  const colabs=load(K.colabs).filter(c=>!q||c.nome.toLowerCase().includes(q)||(c.cargo||'').toLowerCase().includes(q)||(c.setor||'').toLowerCase().includes(q));
+  const grid=document.getElementById('collab-grid');
+  const emp=document.getElementById('collab-empty');
+  if(colabs.length===0){ grid.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none';
+  const resps=load(K.resp);
+  grid.innerHTML=colabs.map(c=>{
+    const col=avatarColor(c.nome);
+    const nResp=resps.filter(r=>r.colabId===c.id).length;
+    return`<div class="collab-card" onclick="openFicha('${c.id}')">
+      <div class="cc-top">
+        <div class="cc-avatar" style="background:${col}22;border:2px solid ${col}44;color:${col}">${initials(c.nome)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="cc-name">${c.nome}</div>
+          <div class="cc-info">${[c.cargo,c.setor].filter(Boolean).join(' · ')||'—'}</div>
+        </div>
+      </div>
+      <div class="cc-stats">
+        ${nResp>0?`<span class="badge b-amber">${nResp} EPI${nResp!==1?'s':''}</span>`:`<span class="badge bg">Sem EPIs</span>`}
+        ${c.tRoupa?`<span class="badge b-purple">Roupa ${c.tRoupa}</span>`:''}
+        ${c.tCalcado?`<span class="badge b-blue">Nº ${c.tCalcado}</span>`:''}
+        ${c.matricula?`<span class="badge bg" style="font-family:var(--mono)">${c.matricula}</span>`:''}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:5px;justify-content:flex-end" onclick="event.stopPropagation()">
+        <button class="ib" onclick="editColab('${c.id}')" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="ib del" onclick="deleteColab('${c.id}')" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRelatorios(){
+  const mvs=load(K.mv);
+  const items=load(K.items);
+  const resps=load(K.resp);
+  const colabs=load(K.colabs);
+  const ent=mvs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qty,0);
+  const sai=mvs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qty,0);
+  const dev=mvs.filter(m=>m.tipo==='devolucao').reduce((s,m)=>s+m.qty,0);
+  const adj=mvs.filter(m=>m.tipo==='ajuste').length;
+  const mx=Math.max(ent,sai,dev,adj,1);
+  document.getElementById('rep-tipos').innerHTML=[['Entradas',ent,'var(--a2)'],['Saídas',sai,'var(--danger)'],['Devoluções',dev,'var(--accent)'],['Ajustes',adj,'var(--a3)']].map(([l,v,c])=>barRow(l,v,mx,c)).join('');
+  const cnt={}; mvs.forEach(m=>{cnt[m.itemId]=(cnt[m.itemId]||0)+m.qty;});
+  const top5=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const mx5=top5[0]?.[1]||1;
+  document.getElementById('rep-top').innerHTML=top5.map(([id,q])=>{const i=items.find(x=>x.id===id); return barRow(i?i.nome.slice(0,16):id.slice(0,8),q,mx5,'var(--accent)');}).join('')||'<p style="color:var(--t3);font-size:13px">Sem dados</p>';
+  const baixo=items.filter(i=>i.qty<=i.min);
+  document.getElementById('rep-baixo').innerHTML=baixo.length===0?'<p style="color:var(--a2);font-size:13px">✓ Todos os itens com estoque adequado</p>':baixo.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px"><span>${i.nome.slice(0,22)}${i.size?` [${i.size}]`:''}</span><span class="badge ${i.qty===0?'b-red':'b-amber'}">${i.qty}/${i.min}</span></div>`).join('');
+  const colabEpi=colabs.map(c=>{const n=resps.filter(r=>r.colabId===c.id).length; return{nome:c.nome,n};}).filter(c=>c.n>0).sort((a,b)=>b.n-a.n).slice(0,6);
+  const mxC=colabEpi[0]?.n||1;
+  document.getElementById('rep-colab').innerHTML=colabEpi.length===0?'<p style="color:var(--t3);font-size:13px">Sem EPIs distribuídos.</p>':colabEpi.map(c=>barRow(c.nome.split(' ')[0]+' '+c.nome.split(' ').pop(),c.n,mxC,'var(--a2)')).join('');
+  document.getElementById('rep-tb').innerHTML=items.map(i=>{const st=status(i);return`<tr><td class="code">${i.codigo}</td><td>${i.nome}${i.size?`<span class="size-tag">${i.size}</span>`:''}</td><td>${i.categoria}</td><td class="code" style="color:${i.ca&&i.ca!=='N/A'?'var(--a2)':'var(--t3)'}">${i.ca||'—'}</td><td class="code">${i.qty} ${i.unidade}</td><td class="code">${i.min}</td><td><span class="badge ${st.c}">${st.l}</span></td></tr>`;}).join('');
+}
+
+function barRow(label,value,max,color){
+  const pct=Math.round((value/max)*100);
+  return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+    <div style="font-size:12px;color:var(--t2);width:110px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${label}">${label}</div>
+    <div style="flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div></div>
+    <div style="font-size:12px;font-family:var(--mono);color:var(--t2);width:28px;text-align:right">${value}</div>
+  </div>`;
+}
+
+// ── EXPORT ──
+function exportCSV(){
+  const items=load(K.items);
+  let csv='Código,Nome,Tamanho,C.A.,Categoria,Quantidade,Mínimo,Unidade,Localização,Status\n';
+  items.forEach(i=>{const st=status(i);csv+=`"${i.codigo}","${i.nome}","${i.size||''}","${i.ca||'N/A'}","${i.categoria}",${i.qty},${i.min},"${i.unidade}","${i.local||''}","${st.l}"\n`;});
+  csv+='\nColaboradores\nNome,Matrícula,Cargo,Setor,Tamanho Roupa,Calçado\n';
+  load(K.colabs).forEach(c=>{csv+=`"${c.nome}","${c.matricula||''}","${c.cargo||''}","${c.setor||''}","${c.tRoupa||''}","${c.tCalcado||''}"\n`;});
+  csv+='\nResponsabilidades Ativas\nColaborador,Item,Tamanho,Qtd,Unidade,Data Entrega\n';
+  const colabs=load(K.colabs);
+  load(K.resp).forEach(r=>{const c=colabs.find(x=>x.id===r.colabId);csv+=`"${c?.nome||r.colabId}","${r.itemNome}","${r.itemSize||''}",${r.qty},"${r.unidade||''}","${new Date(r.dataEntrega).toLocaleDateString('pt-BR')}"\n`;});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='almox_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('CSV exportado!','ok');
+}
+
+// ── TOAST ──
+function toast(msg,type='ok'){
+  const icons={ok:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>`,err:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`};
+  const el=document.createElement('div');el.className=`toast ${type}`;el.innerHTML=icons[type]+`<span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),3500);
+}
+
+// ── INIT ──
+// ─────────────────────────────────────────────
+// INICIALIZAÇÃO — Firebase ou localStorage
+// ─────────────────────────────────────────────
+
+function initApp(){
+  seedData();
+  renderDash();
+  document.getElementById('topbar-btn').style.display='none';
+}
+
+function syncFromFirebase(){
+  if(!window.FB || !window.FB.configured){
+    console.log('Firebase não configurado — usando localStorage');
+    initApp();
+    return;
+  }
+
+  // Mostra indicador de conexão
+  showBanner('Conectando ao Firebase...', 'info');
+
+  const paths = [
+    { fb: FB_PATH[K.items],   local: K.items   },
+    { fb: FB_PATH[K.mv],      local: K.mv      },
+    { fb: FB_PATH[K.colabs],  local: K.colabs  },
+    { fb: FB_PATH[K.resp],    local: K.resp    },
+  ];
+
+  // Escuta mudanças em tempo real para cada coleção
+  paths.forEach(({fb, local}) => {
+    window.FB.onValue(fb, data => {
+      if(data){
+        // Firebase retorna objeto indexado por id — converte para array
+        CACHE[local] = Object.values(data).filter(Boolean);
+      } else {
+        CACHE[local] = [];
+      }
+      // Re-renderiza a página ativa
+      const pg = document.querySelector('.page.active');
+      if(pg){
+        const id = pg.id.replace('pg-','');
+        if(id==='dashboard') renderDash();
+        else if(id==='estoque') renderEstoque();
+        else if(id==='movimentos') renderMovimentos();
+        else if(id==='colaboradores') renderColabs();
+        else if(id==='relatorios') renderRelatorios();
+      }
+    });
+  });
+
+  FB_MODE = true;
+  hideBanner();
+  showBanner('✓ Conectado ao Firebase — dados em tempo real', 'ok');
+  setTimeout(hideBanner, 3500);
+
+  // Verifica se precisa fazer seed inicial no Firebase
+  window.FB.get(FB_PATH[K.items]).then(data => {
+    if(!data || Object.keys(data).length === 0){
+      showBanner('Carregando dados iniciais no Firebase...', 'info');
+      seedData();
+      showBanner('✓ Dados iniciais carregados!', 'ok');
+      setTimeout(hideBanner, 3000);
+    }
+    initApp();
+  }).catch(e => {
+    console.error('Firebase error:', e);
+    showBanner('⚠ Erro ao conectar. Usando modo offline.', 'warn');
+    FB_MODE = false;
+    initApp();
+  });
+}
+
+// Banner de status Firebase
+function showBanner(msg, type){
+  let b = document.getElementById('fb-banner');
+  if(!b){
+    b = document.createElement('div');
+    b.id = 'fb-banner';
+    b.style.cssText = 'position:fixed;top:0;left:224px;right:0;z-index:999;padding:9px 20px;font-size:12px;font-family:var(--mono);display:flex;align-items:center;gap:8px;transition:all .3s';
+    document.body.appendChild(b);
+  }
+  const colors = {
+    info: 'background:#1e3a5f;color:#93c5fd',
+    ok:   'background:#064e3b;color:#6ee7b7',
+    warn: 'background:#78350f;color:#fcd34d',
+    err:  'background:#7f1d1d;color:#fca5a5',
+  };
+  b.style.cssText += ';' + (colors[type]||colors.info);
+  b.innerHTML = msg;
+  b.style.display = 'flex';
+  const fbSt = document.getElementById('fb-status');
+  if(fbSt){
+    if(type==='ok') fbSt.innerHTML='<span style="color:var(--a2)">⬤ Firebase</span>';
+    else if(type==='warn'||type==='err') fbSt.innerHTML='<span style="color:var(--a3)">⬤ offline</span>';
+  }
+}
+function hideBanner(){
+  const b = document.getElementById('fb-banner');
+  if(b) b.style.display = 'none';
+}
+
+// Aguarda Firebase estar pronto
+window.addEventListener('fb-ready', syncFromFirebase);
+// Timeout: se Firebase demorar mais de 4s, inicia em modo offline
+setTimeout(() => {
+  if(!FB_MODE){
+    console.log('Firebase timeout — modo offline');
+    initApp();
+  }
+}, 4000);
+</script>
+</body>
+</html>
